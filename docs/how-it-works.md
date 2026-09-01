@@ -41,7 +41,17 @@ translucent popup backgrounds.
 ## The mic check
 
 The level meter is driven by Quickshell's `PwNodePeakMonitor` on `Pipewire.defaultAudioSource` —
-the same primitive behind the shell audio panel's input meter. Unlike the camera, it needs no
+the same primitive behind the shell audio panel's input meter.
+
+The six cells cover -60..0 dBFS, so speech lands mid-meter the way it does in other mic-check
+UIs; a linear amplitude scale would show healthy speech (~-20 dBFS, 0.1 linear) as one dim cell.
+One catch, established by measurement rather than documentation: `PwNodePeakMonitor.peak` is not
+linear amplitude but its cube root (the PulseAudio perceptual volume curve) — a -36 dBFS room
+reads as `peak` 0.2505 = 0.01572^(1/3), verified against a simultaneous `pw-record` capture. So
+true dBFS is `60*log10(peak)`, and the -60..0 display range maps to 0..1 as `1 + log10(peak)`.
+The top cell starts at -6 dBFS — the conventional caution zone — and lights in the theme's
+urgent color; the brightest recently hit cell holds for a second so a peak that lands between
+glances still registers. Unlike the camera, it needs no
 teardown dance: its PipeWire capture stream exists only while `enabled`, which is bound to
 "panel open and mic check on". So the microphone follows the camera's privacy story — held only
 while you look — and `pw-dump` shows the "Quickshell Peak Detect" stream appearing and vanishing

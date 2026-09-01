@@ -295,22 +295,54 @@ Panel {
           font.pixelSize: Style.font.caption
         }
 
-        Rectangle {
+        // Six cells across -60..0 dBFS: five accent cells up to -6, then an
+        // urgent cell for the caution zone. The brightest recently hit cell
+        // holds for a second so glanced-past peaks still register.
+        //
+        // PwNodePeakMonitor.peak is the cube root of linear amplitude (the
+        // PulseAudio perceptual volume curve) — measured: a -36 dBFS room
+        // read as peak 0.2505 = 0.01572^(1/3). So true dBFS is
+        // 60*log10(peak), and -60..0 maps to 0..1 as 1 + log10(peak).
+        Row {
+          id: micMeter
           anchors.verticalCenter: parent.verticalCenter
-          width: Style.space(72)
-          height: Style.space(5)
-          // Chip language: fixed dark track for contrast over any scene,
-          // theme accent fill like the chip borders and the live bezel.
-          color: Qt.rgba(0, 0, 0, 0.45)
+          spacing: Style.space(2)
 
-          Rectangle {
-            height: parent.height
-            width: parent.width * Util.clamp(micPeak.peak, 0, 1)
-            // Hot input reads as the theme's urgent color: the check is
-            // "am I audible" but also "am I clipping".
-            color: micPeak.peak > 0.9 ? Color.urgent : Color.accent
-            Behavior on width { NumberAnimation { duration: 70 } }
-            Behavior on color { ColorAnimation { duration: 120 } }
+          readonly property real level: micPeak.peak > 0
+            ? Util.clamp(1 + Math.log10(micPeak.peak), 0, 1) : 0
+          property real held: 0
+          onLevelChanged: if (level >= held) { held = level; holdDecay.restart() }
+
+          Timer {
+            id: holdDecay
+            interval: 1000
+            onTriggered: micMeter.held = 0
+          }
+
+          Repeater {
+            model: 6
+
+            Rectangle {
+              required property int index
+              readonly property real threshold: index === 5 ? 0.9 : index * 0.18
+              readonly property real ceiling: index === 5 ? 2 : (index + 1) * 0.18
+              readonly property bool lit: micMeter.level > threshold
+              // The one cell containing the held peak, unless live level covers it.
+              readonly property bool holding: !lit && micMeter.held > threshold
+                && micMeter.held <= ceiling
+
+              width: Style.space(9)
+              height: Style.space(5)
+              color: {
+                var on = index === 5 ? Color.urgent : Color.accent
+                if (lit) return on
+                if (holding) return Util.alpha(on, 0.45)
+                // Chip language: fixed dark unlit cells for contrast over
+                // any scene, theme colors for the lit ones.
+                return Qt.rgba(0, 0, 0, 0.45)
+              }
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
           }
         }
       }

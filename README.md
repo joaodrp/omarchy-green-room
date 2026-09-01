@@ -12,9 +12,10 @@ see yourself in a mirrored live preview, click again and the camera is off.
   closes — nothing keeps `/dev/videoN` busy in the background
 - Controls appear only on hover: flip (`m`), next camera (`c`, only with
   more than one camera; the choice is persisted), mic check (`a`)
-- Optional mic check: a live input level meter on the glass, in the
-  theme's colors (urgent when the input runs hot); the microphone, like
-  the camera, is read only while the panel is open
+- Optional mic check: a segmented input level meter on the glass,
+  dBFS-scaled so speech lands mid-meter, with a peak-hold and an urgent
+  top cell when the input runs hot; the microphone, like the camera, is
+  read only while the panel is open
 - The panel border doubles as the camera-on light (accent while live)
 - Keybindable: `omarchy-shell io.github.joaodrp.hand-mirror toggle`
 
