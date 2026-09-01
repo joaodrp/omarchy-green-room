@@ -1,7 +1,7 @@
 # Green Room
 
 A quick check of how you look, from the Omarchy bar. In the spirit of
-[Hand Mirror](https://handmirror.app/) for macOS: click the camera icon,
+[Hand Mirror](https://handmirror.app/) for macOS: click the bar icon,
 see yourself in a mirrored live preview, click again and the camera is off.
 
 ## Features

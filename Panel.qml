@@ -26,7 +26,7 @@ Panel {
   readonly property var devices: mediaDevices.videoInputs
   readonly property bool hasDevices: devices.length > 0
   readonly property string requestedDeviceId: String(root.setting("device", "auto") || "auto")
-  // Mirrored like a mirror: the whole point of a hand mirror.
+  // Mirrored by default: an unmirrored preview is useless for fixing your hair.
   readonly property bool mirrored: root.setting("mirror", true) !== false
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
@@ -56,15 +56,19 @@ Panel {
   // like the camera, is held only while you look.
   readonly property bool micCheck: root.setting("micCheck", false) === true
   readonly property var micSource: Pipewire.defaultAudioSource
-  readonly property bool micMuted: micSource && micSource.audio ? micSource.audio.muted : false
+  // No source reads as muted: on a mic check, "nothing will be heard"
+  // must not look like "you're quiet".
+  readonly property bool micMuted: !micSource || !micSource.audio || micSource.audio.muted === true
 
-  // audio.muted is only populated while the node is bound.
-  PwObjectTracker { objects: root.micSource ? [root.micSource] : [] }
-
+  // The node reference alone keeps the source bound while the check is on
+  // — binding is not capture, so nothing holds the mic — and a bound node
+  // is what makes audio.muted readable. The capture stream exists only
+  // while enabled. Stream errors are invisible to QML (Quickshell only
+  // logs them); the meter degrades to reading zero.
   PwNodePeakMonitor {
     id: micPeak
-    node: root.micSource
-    enabled: root.opened && root.micCheck && !!root.micSource
+    node: root.micCheck ? root.micSource : null
+    enabled: root.opened
   }
 
   // ---------------------------------------------------------------- sizing
@@ -76,8 +80,10 @@ Panel {
   implicitHeight: button.implicitHeight
 
   // ----------------------------------------------------------------- state
-  // Caption for whichever hover chip the pointer is on ("" = none).
-  property string chipHint: ""
+  // The chip under the pointer (null = none). The caption derives its
+  // text from this reference, so a hint that changes under a stationary
+  // pointer can never go stale.
+  property var hoveredChip: null
   // "" = fine, otherwise the message shown on the glass.
   property string cameraError: ""
   // First frame arrived for the current session: the glass lights up.
@@ -105,6 +111,8 @@ Panel {
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
       root.bar.shell.updateEntryInline(root.moduleName, entry)
+    else
+      console.warn("green-room", "shell.updateEntryInline unavailable; setting", key, "will not survive a restart")
   }
 
   // ------------------------------------------------------------------- bar
@@ -193,7 +201,6 @@ Panel {
             if (!active) {
               root.live = false
               root.cameraError = ""
-              root.chipHint = ""
             }
           }
           sourceComponent: VideoOutput {
@@ -297,7 +304,10 @@ Panel {
 
         // Six cells across -60..0 dBFS: five accent cells up to -6, then an
         // urgent cell for the caution zone. The brightest recently hit cell
-        // holds for a second so glanced-past peaks still register.
+        // keeps glowing dimly for a second after the level falls below it,
+        // so glanced-past peaks still register. No transition animations: a
+        // meter should be instant, and an animating cell inside the layered
+        // glass would keep the whole layer repainting.
         //
         // PwNodePeakMonitor.peak is the cube root of linear amplitude (the
         // PulseAudio perceptual volume curve) — measured: a -36 dBFS room
@@ -308,40 +318,47 @@ Panel {
           anchors.verticalCenter: parent.verticalCenter
           spacing: Style.space(2)
 
+          readonly property int cells: 6
+          // The caution cell starts at -6 dBFS = 0.9 on the 0..1 scale;
+          // the accent cells split the range below it evenly.
+          readonly property real cautionLevel: 0.9
+          readonly property real cellSpan: cautionLevel / (cells - 1)
           readonly property real level: micPeak.peak > 0
             ? Util.clamp(1 + Math.log10(micPeak.peak), 0, 1) : 0
-          property real held: 0
-          onLevelChanged: if (level >= held) { held = level; holdDecay.restart() }
+          // Quantized once, so per-cell bindings re-evaluate only when the
+          // picture changes, not on every peak update (~50-100/s).
+          readonly property int litCells: level > cautionLevel
+            ? cells : Math.ceil(level / cellSpan)
+          property int heldCell: -1
+          onLitCellsChanged: {
+            // While the level covers the held cell the hold is invisible and
+            // needs no decay; it starts decaying when the level drops below.
+            if (litCells - 1 >= heldCell) { heldCell = litCells - 1; holdDecay.stop() }
+            else holdDecay.restart()
+          }
 
           Timer {
             id: holdDecay
             interval: 1000
-            onTriggered: micMeter.held = 0
+            onTriggered: micMeter.heldCell = micMeter.litCells - 1
           }
 
           Repeater {
-            model: 6
+            model: micMeter.cells
 
             Rectangle {
               required property int index
-              readonly property real threshold: index === 5 ? 0.9 : index * 0.18
-              readonly property real ceiling: index === 5 ? 2 : (index + 1) * 0.18
-              readonly property bool lit: micMeter.level > threshold
-              // The one cell containing the held peak, unless live level covers it.
-              readonly property bool holding: !lit && micMeter.held > threshold
-                && micMeter.held <= ceiling
+              readonly property bool lit: index < micMeter.litCells
+              readonly property color onColor: index === micMeter.cells - 1
+                ? Color.urgent : Color.accent
 
               width: Style.space(13)
               height: Style.space(7)
-              color: {
-                var on = index === 5 ? Color.urgent : Color.accent
-                if (lit) return on
-                if (holding) return Util.alpha(on, 0.45)
-                // Chip language: fixed dark unlit cells for contrast over
-                // any scene, theme colors for the lit ones.
-                return Qt.rgba(0, 0, 0, 0.45)
-              }
-              Behavior on color { ColorAnimation { duration: 150 } }
+              // Chip language: fixed dark unlit cells for contrast over any
+              // scene, theme colors for the lit ones.
+              color: lit ? onColor
+                : index === micMeter.heldCell ? Util.alpha(onColor, 0.45)
+                : Qt.rgba(0, 0, 0, 0.45)
             }
           }
         }
@@ -356,7 +373,10 @@ Panel {
         height: Style.space(64)
         bottomLeftRadius: Style.cornerRadius
         bottomRightRadius: Style.cornerRadius
-        opacity: hoverArea.hovered && root.live ? 1 : 0
+        // Shown over live video and over the no-camera/error glass alike:
+        // the mic chip must stay reachable with a dead camera, which is
+        // exactly when "at least check my mic" matters.
+        opacity: hoverArea.hovered && (root.live || !root.hasDevices || root.cameraError !== "") ? 1 : 0
         enabled: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
         gradient: Gradient {
@@ -398,8 +418,8 @@ Panel {
           anchors.horizontalCenter: parent.horizontalCenter
           anchors.bottom: parent.bottom
           anchors.bottomMargin: Style.space(54)
-          text: root.chipHint
-          visible: root.chipHint !== ""
+          text: root.hoveredChip ? root.hoveredChip.hint : ""
+          visible: root.hoveredChip !== null
           color: Qt.rgba(1, 1, 1, 0.75)
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
@@ -436,10 +456,6 @@ Panel {
     property string hint: ""
     property bool on: false
 
-    // The caption is a copy, taken on hover enter — refresh it when an
-    // activation changes this chip's own hint under the pointer.
-    onHintChanged: if (chipArea.containsMouse) root.chipHint = hint
-
     signal activated()
 
     width: Style.space(34)
@@ -464,7 +480,12 @@ Panel {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: chip.activated()
-      onContainsMouseChanged: root.chipHint = containsMouse ? chip.hint : ""
+      // Guarded clear: chip A's exit may arrive after chip B's enter, and
+      // must not blank the caption B just claimed.
+      onContainsMouseChanged: {
+        if (containsMouse) root.hoveredChip = chip
+        else if (root.hoveredChip === chip) root.hoveredChip = null
+      }
     }
   }
 }

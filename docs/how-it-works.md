@@ -52,11 +52,14 @@ true dBFS is `60*log10(peak)`, and the -60..0 display range maps to 0..1 as `1 +
 The top cell starts at -6 dBFS — the conventional caution zone — and lights in the theme's
 urgent color; the brightest recently hit cell holds for a second so a peak that lands between
 glances still registers. Unlike the camera, it needs no
-teardown dance: its PipeWire capture stream exists only while `enabled`, which is bound to
-"panel open and mic check on". So the microphone follows the camera's privacy story — held only
-while you look — and `pw-dump` shows the "Quickshell Peak Detect" stream appearing and vanishing
-with the panel. A `PwObjectTracker` keeps the source node bound so `audio.muted` is readable;
-a muted mic shows the slashed glyph instead of a silently flat bar.
+teardown dance: the monitor's `node` is set only while the check is on, and its PipeWire capture
+stream exists only while the panel is also open. So the microphone follows the camera's privacy
+story — held only while you look — and `pw-dump` shows the "Quickshell Peak Detect" stream
+appearing and vanishing with the panel. The node reference alone keeps the source bound (binding
+is not capture), which is what makes `audio.muted` readable; a muted or missing mic shows the
+slashed glyph instead of a silently flat bar. Stream errors are invisible to QML — Quickshell
+only logs them, and the meter reads zero — so there is no audio equivalent of the camera's
+error glass.
 
 ## Why the mirror flip is a transform
 
