@@ -315,19 +315,29 @@ Panel {
 
       // Mic check meter: not hover-gated — you watch it while talking.
       // Before the scrim in draw order so the hover chrome wins overlaps.
-      Row {
+      // On the chips' dark plate so it separates from any scene: the plate
+      // carries it over bright video, the light unlit ticks over dark.
+      Rectangle {
         visible: root.micCheck
         anchors.left: parent.left
         anchors.bottom: parent.bottom
         anchors.leftMargin: Style.space(12)
         anchors.bottomMargin: Style.space(10)
-        spacing: Style.space(6)
+        width: meterRow.width + Style.space(16)
+        height: Style.space(30)
+        radius: Style.cornerRadius
+        color: Qt.rgba(0, 0, 0, 0.45)
         opacity: root.micMuted ? 0.45 : 1
 
         // Hovering the meter names the metered mic: it follows the default
         // source, and "wrong mic" (a forgotten headset) should be
         // diagnosable in one glance.
         HoverHandler { id: meterHover }
+
+        Row {
+          id: meterRow
+          anchors.centerIn: parent
+          spacing: Style.space(6)
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
@@ -393,11 +403,11 @@ Panel {
 
               width: Style.space(8)
               height: Style.space(7)
-              // Chip language: fixed dark unlit cells for contrast over any
-              // scene, theme colors for the lit ones.
+              // Light ticks on the dark plate, theme colors for the lit
+              // cells — the scale stays readable over any scene.
               color: lit ? onColor
                 : index === micMeter.heldCell ? Util.alpha(onColor, 0.45)
-                : Qt.rgba(0, 0, 0, 0.45)
+                : Qt.rgba(1, 1, 1, 0.12)
             }
           }
         }
@@ -411,6 +421,7 @@ Panel {
           color: Qt.rgba(1, 1, 1, 0.75)
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
+        }
         }
       }
 
