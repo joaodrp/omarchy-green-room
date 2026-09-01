@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import QtMultimedia
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
@@ -69,6 +70,18 @@ Panel {
     id: micPeak
     node: root.micCheck && !root.micRebind ? root.micSource : null
     enabled: root.opened
+  }
+
+  // A peak monitor is deliberately invisible to WirePlumber's headset
+  // autoswitch, so a Bluetooth headset left in A2DP keeps its mic off and
+  // the meter reads a mic no call would use. Hold a real capture while
+  // the check runs — what a call does: the headset flips to its
+  // mic-capable profile and the meter shows what the far side would
+  // hear. Released with the panel, like the camera. (Bluetooth audio
+  // quality drops to call-grade while held; that is the honest preview.)
+  Process {
+    command: ["pw-record", "/dev/null"]
+    running: root.opened && root.micCheck && !!root.micSource
   }
 
   // Watchdog for the invisible stream death: a Bluetooth profile switch
