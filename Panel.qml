@@ -296,6 +296,11 @@ Panel {
         spacing: Style.space(6)
         opacity: root.micMuted ? 0.45 : 1
 
+        // Hovering the meter names the metered mic: it follows the default
+        // source, and "wrong mic" (a forgotten headset) should be
+        // diagnosable in one glance.
+        HoverHandler { id: meterHover }
+
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: root.micMuted ? "󰍭" : "󰍬"
@@ -367,6 +372,17 @@ Panel {
                 : Qt.rgba(0, 0, 0, 0.45)
             }
           }
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: meterHover.hovered
+          text: root.micSource
+            ? String(root.micSource.nickname || root.micSource.description || root.micSource.name)
+            : "no mic"
+          color: Qt.rgba(1, 1, 1, 0.75)
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
         }
       }
 
