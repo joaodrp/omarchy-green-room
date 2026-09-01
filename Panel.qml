@@ -436,6 +436,10 @@ Panel {
     property string hint: ""
     property bool on: false
 
+    // The caption is a copy, taken on hover enter — refresh it when an
+    // activation changes this chip's own hint under the pointer.
+    onHintChanged: if (chipArea.containsMouse) root.chipHint = hint
+
     signal activated()
 
     width: Style.space(34)
