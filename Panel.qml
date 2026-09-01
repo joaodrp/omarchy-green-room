@@ -264,15 +264,17 @@ Panel {
         maskSource: glassMask
       }
 
-      // Bezel hairline; shifts to accent while the camera is live, so the
-      // border doubles as the camera-on light.
+      // No frame around live video — screens are bezel-less, and the video
+      // is its own edge. The hairline exists only for the dark glass, which
+      // would otherwise dissolve into a dark wallpaper; it fades away as
+      // the video fades in.
       Rectangle {
         anchors.fill: parent
         color: "transparent"
         antialiasing: true
         radius: Style.cornerRadius
         border.width: Style.spacing.hairline
-        border.color: root.live ? Util.alpha(Color.accent, 0.6) : Util.alpha(root.barForeground, 0.22)
+        border.color: root.live ? "transparent" : Util.alpha(root.barForeground, 0.22)
         Behavior on border.color { ColorAnimation { duration: 300 } }
       }
 

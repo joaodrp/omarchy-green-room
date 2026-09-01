@@ -16,7 +16,6 @@ see yourself in a mirrored live preview, click again and the camera is off.
   dBFS-scaled so speech lands mid-meter, with a peak-hold and an urgent
   top cell when the input runs hot; the microphone, like the camera, is
   read only while the panel is open
-- The panel border doubles as the camera-on light (accent while live)
 - Keybindable: `omarchy-shell io.github.joaodrp.green-room toggle`
 
 ## Requirements
