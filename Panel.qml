@@ -67,8 +67,23 @@ Panel {
   // logs them); the meter degrades to reading zero.
   PwNodePeakMonitor {
     id: micPeak
-    node: root.micCheck ? root.micSource : null
+    node: root.micCheck && !root.micRebind ? root.micSource : null
     enabled: root.opened
+  }
+
+  // Watchdog for the invisible stream death: a Bluetooth profile switch
+  // (headset in/out of ears) can kill the capture stream with no signal
+  // reaching QML, freezing the meter at zero until a manual reopen. A
+  // meter flat for ten straight seconds is either true silence or that
+  // death; rebinding the node is invisible for the former and revives
+  // the latter.
+  property bool micRebind: false
+  onMicRebindChanged: if (micRebind) Qt.callLater(function() { root.micRebind = false })
+  Timer {
+    interval: 10000
+    repeat: true
+    running: root.opened && root.micCheck && !!root.micSource
+    onTriggered: if (micPeak.peak <= 0) root.micRebind = true
   }
 
   // ---------------------------------------------------------------- sizing

@@ -59,8 +59,10 @@ story — held only while you look — and `pw-dump` shows the "Quickshell Peak 
 appearing and vanishing with the panel. The node reference alone keeps the source bound (binding
 is not capture), which is what makes `audio.muted` readable; a muted or missing mic shows the
 slashed glyph instead of a silently flat bar. Stream errors are invisible to QML — Quickshell
-only logs them, and the meter reads zero — so there is no audio equivalent of the camera's
-error glass.
+only logs them, and the meter reads zero — so instead of an error glass there is a watchdog: a
+meter flat for ten straight seconds gets its node rebound, which is invisible on a genuinely
+quiet mic and revives a stream killed by, say, a Bluetooth headset's profile switch (verified by
+destroying the stream node with `pw-cli` and watching it return).
 
 ## Why the mirror flip is a transform
 
