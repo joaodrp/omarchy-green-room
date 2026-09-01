@@ -3,7 +3,7 @@
 Instructions for coding agents working in this repository (see [agents.md](https://agents.md)).
 
 An [Omarchy 4](https://omarchy.org/manual/shell-plugins/) shell plugin: a `bar-widget` for the
-Quattro Quickshell shell, id `io.github.joaodrp.hand-mirror`.
+Quattro Quickshell shell, id `io.github.joaodrp.green-room`.
 
 Read these first, and do not restate them here:
 

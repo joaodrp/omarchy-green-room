@@ -17,9 +17,9 @@ when the panel opens.
 ## Running it
 
 ```sh
-ln -s "$PWD" ~/.config/omarchy/plugins/io.github.joaodrp.hand-mirror
+ln -s "$PWD" ~/.config/omarchy/plugins/io.github.joaodrp.green-room
 omarchy-shell shell rescanPlugins
-omarchy plugin enable io.github.joaodrp.hand-mirror
+omarchy plugin enable io.github.joaodrp.green-room
 ```
 
 Hot reload watches the plugins directory with `inotifywait -r`, which ignores a symlinked
@@ -49,9 +49,9 @@ The checks prove the file parses. They do not prove the panel draws, the camera 
 sensor is released. For that:
 
 ```sh
-omarchy-shell io.github.joaodrp.hand-mirror open
+omarchy-shell io.github.joaodrp.green-room open
 fuser /dev/video0        # held by the shell while open
-omarchy-shell io.github.joaodrp.hand-mirror close
+omarchy-shell io.github.joaodrp.green-room close
 fuser /dev/video0        # nothing within ~2s
 ```
 

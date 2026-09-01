@@ -1,4 +1,4 @@
-# Hand Mirror
+# Green Room
 
 A quick check of how you look, from the Omarchy bar. In the spirit of
 [Hand Mirror](https://handmirror.app/) for macOS: click the camera icon,
@@ -17,7 +17,7 @@ see yourself in a mirrored live preview, click again and the camera is off.
   top cell when the input runs hot; the microphone, like the camera, is
   read only while the panel is open
 - The panel border doubles as the camera-on light (accent while live)
-- Keybindable: `omarchy-shell io.github.joaodrp.hand-mirror toggle`
+- Keybindable: `omarchy-shell io.github.joaodrp.green-room toggle`
 
 ## Requirements
 
@@ -28,7 +28,7 @@ see yourself in a mirrored live preview, click again and the camera is off.
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/joaodrp/omarchy-hand-mirror.git --enable
+omarchy plugin add https://github.com/joaodrp/omarchy-green-room.git --enable
 ```
 
 ## Settings
@@ -46,8 +46,8 @@ omarchy plugin add https://github.com/joaodrp/omarchy-hand-mirror.git --enable
 camera tuning tool with a preview attached; [Camera
 Preview](https://github.com/mandavkarpranjal/cam-preview) predates Qt
 versions where live video works in the shell and renders a still-capture
-slideshow. Hand Mirror is just the mirror: one click, live video,
-mirrored, nothing else.
+slideshow. Green Room is just the pre-meeting check: one click, live
+video, mirrored, with an optional mic meter — nothing else.
 
 ## License
 

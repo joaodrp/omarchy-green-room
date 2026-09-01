@@ -5,7 +5,7 @@ import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 
-// Hand Mirror: click the bar icon, see yourself. The panel is nothing but
+// Green Room: click the bar icon, see yourself. The panel is nothing but
 // the glass — a live 16:9 mirror. Idle it reads as dark glass with a
 // specular glare; live video fades in like the mirror catching light.
 // Controls appear only on hover.
@@ -17,8 +17,8 @@ import qs.Ui
 // sensor.
 Panel {
   id: root
-  moduleName: "io.github.joaodrp.hand-mirror"
-  ipcTarget: "io.github.joaodrp.hand-mirror"
+  moduleName: "io.github.joaodrp.green-room"
+  ipcTarget: "io.github.joaodrp.green-room"
 
   // ---------------------------------------------------------------- devices
   MediaDevices { id: mediaDevices }
@@ -112,9 +112,9 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "󱞟"
+    text: "󰴂"
     active: root.opened && root.cameraError === ""
-    tooltipText: "Hand Mirror"
+    tooltipText: "Green Room"
     onPressed: function(button) { if (button === Qt.LeftButton) root.toggle() }
   }
 
@@ -216,7 +216,7 @@ Panel {
               cameraDevice: root.selectedDevice !== null ? root.selectedDevice : undefined
               onErrorOccurred: function(error, errorString) {
                 if (error === Camera.NoError) return
-                console.warn("hand-mirror", "camera error", error, errorString)
+                console.warn("green-room", "camera error", error, errorString)
                 root.cameraError = String(errorString || "") || "Camera unavailable"
               }
             }

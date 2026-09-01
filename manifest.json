@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "io.github.joaodrp.hand-mirror",
-  "name": "Hand Mirror",
+  "id": "io.github.joaodrp.green-room",
+  "name": "Green Room",
   "version": "0.1.0",
   "author": "João Pereira",
   "license": "MIT",
@@ -13,7 +13,7 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Hand Mirror",
+    "displayName": "Green Room",
     "description": "Click the bar icon, see yourself in a mirrored live preview. The camera is released when the panel closes.",
     "category": "Hardware",
     "allowMultiple": false,
