@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import QtMultimedia
+import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 
@@ -47,6 +48,23 @@ Panel {
       if (String(root.devices[i].id) === current) { next = (i + 1) % root.devices.length; break }
     }
     root.persistSetting("device", String(root.devices[next].id))
+  }
+
+  // ------------------------------------------------------------------- mic
+  // Mic check: a peak meter on the glass, fed by a PipeWire capture stream
+  // that exists only while the panel is open with the check on — the mic,
+  // like the camera, is held only while you look.
+  readonly property bool micCheck: root.setting("micCheck", false) === true
+  readonly property var micSource: Pipewire.defaultAudioSource
+  readonly property bool micMuted: micSource && micSource.audio ? micSource.audio.muted : false
+
+  // audio.muted is only populated while the node is bound.
+  PwObjectTracker { objects: root.micSource ? [root.micSource] : [] }
+
+  PwNodePeakMonitor {
+    id: micPeak
+    node: root.micSource
+    enabled: root.opened && root.micCheck && !!root.micSource
   }
 
   // ---------------------------------------------------------------- sizing
@@ -124,6 +142,7 @@ Panel {
       onTextKey: function(t) {
         if (t === "m") root.persistSetting("mirror", !root.mirrored)
         else if (t === "c") root.cycleDevice()
+        else if (t === "a") root.persistSetting("micCheck", !root.micCheck)
       }
 
       // Glass content, rendered offscreen and drawn through the rounded
@@ -257,6 +276,45 @@ Panel {
         id: hoverArea
       }
 
+      // Mic check meter: not hover-gated — you watch it while talking.
+      // Before the scrim in draw order so the hover chrome wins overlaps.
+      Row {
+        visible: root.micCheck
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: Style.space(12)
+        anchors.bottomMargin: Style.space(10)
+        spacing: Style.space(6)
+        opacity: root.micMuted ? 0.45 : 1
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: root.micMuted ? "󰍭" : "󰍬"
+          color: Qt.rgba(1, 1, 1, 0.75)
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: Style.space(72)
+          height: Style.space(5)
+          // Chip language: fixed dark track for contrast over any scene,
+          // theme accent fill like the chip borders and the live bezel.
+          color: Qt.rgba(0, 0, 0, 0.45)
+
+          Rectangle {
+            height: parent.height
+            width: parent.width * Util.clamp(micPeak.peak, 0, 1)
+            // Hot input reads as the theme's urgent color: the check is
+            // "am I audible" but also "am I clipping".
+            color: micPeak.peak > 0.9 ? Color.urgent : Color.accent
+            Behavior on width { NumberAnimation { duration: 70 } }
+            Behavior on color { ColorAnimation { duration: 120 } }
+          }
+        }
+      }
+
       // Hover chrome: a bottom scrim with icon-only controls. Disabled while
       // faded out so an invisible chip cannot swallow a click.
       Rectangle {
@@ -292,6 +350,13 @@ Panel {
             glyph: "󰄈"
             hint: (root.selectedDevice ? String(root.selectedDevice.description) : "") + " (c)"
             onActivated: root.cycleDevice()
+          }
+
+          ChipButton {
+            glyph: "󰍬"
+            on: root.micCheck
+            hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
+            onActivated: root.persistSetting("micCheck", !root.micCheck)
           }
         }
 

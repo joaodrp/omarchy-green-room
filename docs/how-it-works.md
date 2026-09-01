@@ -38,6 +38,16 @@ video would leak into the corners. The glass renders into a layer and is drawn t
 `maskSource` by `MultiEffect` — real alpha clipping, which also stays correct on themes with
 translucent popup backgrounds.
 
+## The mic check
+
+The level meter is driven by Quickshell's `PwNodePeakMonitor` on `Pipewire.defaultAudioSource` —
+the same primitive behind the shell audio panel's input meter. Unlike the camera, it needs no
+teardown dance: its PipeWire capture stream exists only while `enabled`, which is bound to
+"panel open and mic check on". So the microphone follows the camera's privacy story — held only
+while you look — and `pw-dump` shows the "Quickshell Peak Detect" stream appearing and vanishing
+with the panel. A `PwObjectTracker` keeps the source node bound so `audio.muted` is readable;
+a muted mic shows the slashed glyph instead of a silently flat bar.
+
 ## Why the mirror flip is a transform
 
 Mirroring is `Scale { xScale: -1 }` on the `VideoOutput` — render-side only. The pipeline never

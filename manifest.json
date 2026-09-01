@@ -21,6 +21,7 @@
     "defaults": {
       "device": "auto",
       "mirror": true,
+      "micCheck": false,
       "previewWidth": 560
     },
     "schema": [
@@ -35,6 +36,12 @@
         "type": "boolean",
         "label": "Mirror the preview",
         "defaultValue": true
+      },
+      {
+        "key": "micCheck",
+        "type": "boolean",
+        "label": "Show mic level meter",
+        "defaultValue": false
       },
       {
         "key": "previewWidth",

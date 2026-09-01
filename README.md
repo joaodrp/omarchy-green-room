@@ -11,7 +11,10 @@ see yourself in a mirrored live preview, click again and the camera is off.
 - The camera is held only while the panel is open and released when it
   closes — nothing keeps `/dev/videoN` busy in the background
 - Controls appear only on hover: flip (`m`), next camera (`c`, only with
-  more than one camera; the choice is persisted)
+  more than one camera; the choice is persisted), mic check (`a`)
+- Optional mic check: a live input level meter on the glass, in the
+  theme's colors (urgent when the input runs hot); the microphone, like
+  the camera, is read only while the panel is open
 - The panel border doubles as the camera-on light (accent while live)
 - Keybindable: `omarchy-shell io.github.joaodrp.hand-mirror toggle`
 
@@ -33,6 +36,7 @@ omarchy plugin add https://github.com/joaodrp/omarchy-hand-mirror.git --enable
 | --- | --- | --- |
 | `device` | `auto` | Camera device id; `auto` follows the system default |
 | `mirror` | `true` | Mirror the preview horizontally |
+| `micCheck` | `false` | Show a live mic level meter on the glass |
 | `previewWidth` | `560` | Mirror width in px (320-960, 16:9) |
 
 ## Why not omarchy-webcam or cam-preview?
