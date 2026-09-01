@@ -43,8 +43,9 @@ translucent popup backgrounds.
 The level meter is driven by Quickshell's `PwNodePeakMonitor` on `Pipewire.defaultAudioSource` —
 the same primitive behind the shell audio panel's input meter.
 
-The six cells cover -60..0 dBFS, so speech lands mid-meter the way it does in other mic-check
-UIs; a linear amplitude scale would show healthy speech (~-20 dBFS, 0.1 linear) as one dim cell.
+The ten cells cover -60..0 dBFS — 6 dB per cell, fine enough that syllable-scale dynamics move
+the meter while you talk — so speech lands mid-meter the way it does in other mic-check UIs; a
+linear amplitude scale would show healthy speech (~-20 dBFS, 0.1 linear) as one dim cell.
 One catch, established by measurement rather than documentation: `PwNodePeakMonitor.peak` is not
 linear amplitude but its cube root (the PulseAudio perceptual volume curve) — a -36 dBFS room
 reads as `peak` 0.2505 = 0.01572^(1/3), verified against a simultaneous `pw-record` capture. So

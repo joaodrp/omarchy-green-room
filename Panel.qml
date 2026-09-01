@@ -302,8 +302,10 @@ Panel {
           font.pixelSize: Style.font.icon
         }
 
-        // Six cells across -60..0 dBFS: five accent cells up to -6, then an
-        // urgent cell for the caution zone. The brightest recently hit cell
+        // Ten cells across -60..0 dBFS — 6 dB each, so syllable-scale
+        // dynamics (~6-8 dB) visibly move the meter while you talk: nine
+        // accent cells up to -6, then an urgent cell for the caution zone.
+        // The brightest recently hit cell
         // keeps glowing dimly for a second after the level falls below it,
         // so glanced-past peaks still register. No transition animations: a
         // meter should be instant, and an animating cell inside the layered
@@ -318,7 +320,7 @@ Panel {
           anchors.verticalCenter: parent.verticalCenter
           spacing: Style.space(2)
 
-          readonly property int cells: 6
+          readonly property int cells: 10
           // The caution cell starts at -6 dBFS = 0.9 on the 0..1 scale;
           // the accent cells split the range below it evenly.
           readonly property real cautionLevel: 0.9
@@ -352,7 +354,7 @@ Panel {
               readonly property color onColor: index === micMeter.cells - 1
                 ? Color.urgent : Color.accent
 
-              width: Style.space(13)
+              width: Style.space(8)
               height: Style.space(7)
               // Chip language: fixed dark unlit cells for contrast over any
               // scene, theme colors for the lit ones.
