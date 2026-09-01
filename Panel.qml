@@ -336,9 +336,11 @@ Panel {
           property int heldCell: -1
           onLitCellsChanged: {
             // While the level covers the held cell the hold is invisible and
-            // needs no decay; it starts decaying when the level drops below.
+            // needs no decay; the decay runs from the moment the level first
+            // drops below — started, not restarted, so fluctuation further
+            // down cannot extend a stale hold past its second.
             if (litCells - 1 >= heldCell) { heldCell = litCells - 1; holdDecay.stop() }
-            else holdDecay.restart()
+            else if (!holdDecay.running) holdDecay.start()
           }
 
           Timer {
