@@ -292,7 +292,7 @@ Panel {
           text: root.micMuted ? "󰍭" : "󰍬"
           color: Qt.rgba(1, 1, 1, 0.75)
           font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
+          font.pixelSize: Style.font.icon
         }
 
         // Six cells across -60..0 dBFS: five accent cells up to -6, then an
@@ -331,8 +331,8 @@ Panel {
               readonly property bool holding: !lit && micMeter.held > threshold
                 && micMeter.held <= ceiling
 
-              width: Style.space(9)
-              height: Style.space(5)
+              width: Style.space(13)
+              height: Style.space(7)
               color: {
                 var on = index === 5 ? Color.urgent : Color.accent
                 if (lit) return on
