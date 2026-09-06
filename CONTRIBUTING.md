@@ -11,7 +11,7 @@ when the panel opens.
 | File | |
 | --- | --- |
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
-| `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome |
+| `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 
 ## Running it
@@ -60,9 +60,11 @@ and look at the panel.
 ## Conventions
 
 Native to Omarchy first. Before inventing a component, look for the built-in that solves it in
-`$OMARCHY_PATH/shell/Ui/` or in a first-party panel under `$OMARCHY_PATH/shell/plugins/`. The one
-local component, `ChipButton`, exists because the kit buttons derive their state fills from theme
-alphas tuned for themed panel surfaces — too faint to read over moving video.
+`$OMARCHY_PATH/shell/Ui/` or in a first-party panel under `$OMARCHY_PATH/shell/plugins/`. The
+local components earn their existence the same way: `ChipButton` because the kit buttons derive
+their state fills from theme alphas tuned for themed panel surfaces — too faint to read over
+moving video — and `MirrorVideo` / `MicMeterPlate` because the panel glass and the pinned window
+render the same content.
 
 Theme tokens (`Style.*`, `Color.*`) for everything that sits on the card; fixed black/white only
 for what sits on the video, which no theme controls.

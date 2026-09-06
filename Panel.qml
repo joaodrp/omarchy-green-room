@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Effects
 import QtMultimedia
+import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
@@ -11,11 +13,11 @@ import qs.Ui
 // specular glare; live video fades in like the mirror catching light.
 // Controls appear only on hover.
 //
-// The whole capture stack (Camera + CaptureSession + VideoOutput) mounts and
-// is destroyed together with the popup, via the Loader inside the glass:
-// on Qt's FFmpeg camera backend `Camera.active = false` leaves /dev/videoN
-// open and streaming, and only destroying the Camera object releases the
-// sensor.
+// The capture stack (Camera + CaptureSession) mounts and is destroyed
+// together with whichever surface shows it — the popup or the pinned
+// mirror — via the root-level Loader: on Qt's FFmpeg camera backend
+// `Camera.active = false` leaves /dev/videoN open and streaming, and
+// only destroying the Camera object releases the sensor.
 Panel {
   id: root
   moduleName: "io.github.joaodrp.green-room"
@@ -53,8 +55,8 @@ Panel {
 
   // ------------------------------------------------------------------- mic
   // Mic check: a peak meter on the glass, fed by a PipeWire capture stream
-  // that exists only while the panel is open with the check on — the mic,
-  // like the camera, is held only while you look.
+  // that exists only while the mirror is showing (panel or pin) with the
+  // check on — the mic, like the camera, is held only while you look.
   readonly property bool micCheck: root.setting("micCheck", false) === true
   readonly property var micSource: Pipewire.defaultAudioSource
   // No source reads as muted: on a mic check, "nothing will be heard"
@@ -69,7 +71,7 @@ Panel {
   PwNodePeakMonitor {
     id: micPeak
     node: root.micCheck && !root.micRebind ? root.micSource : null
-    enabled: root.opened
+    enabled: root.showing
   }
 
   // A peak monitor is deliberately invisible to WirePlumber's headset
@@ -77,11 +79,11 @@ Panel {
   // the meter reads a mic no call would use. Hold a real capture while
   // the check runs — what a call does: the headset flips to its
   // mic-capable profile and the meter shows what the far side would
-  // hear. Released with the panel, like the camera. (Bluetooth audio
+  // hear. Released with the mirror, like the camera. (Bluetooth audio
   // quality drops to call-grade while held; that is the honest preview.)
   Process {
     command: ["pw-record", "/dev/null"]
-    running: root.opened && root.micCheck && !!root.micSource
+    running: root.showing && root.micCheck && !!root.micSource
   }
 
   // Watchdog for the invisible stream death: a Bluetooth profile switch
@@ -95,14 +97,146 @@ Panel {
   Timer {
     interval: 10000
     repeat: true
-    running: root.opened && root.micCheck && !!root.micSource
+    running: root.showing && root.micCheck && !!root.micSource
     onTriggered: if (micPeak.peak <= 0) root.micRebind = true
+  }
+
+  // The meter's derivation, at root because it reads the one mic — the
+  // two MicMeterPlate surfaces are pure presentation over these values,
+  // so per-peak math runs once and a held peak survives the pin handoff.
+  //
+  // Ten cells across -60..0 dBFS — 6 dB each, so syllable-scale dynamics
+  // (~6-8 dB) visibly move the meter while you talk: nine accent cells up
+  // to -6, then an urgent cell for the caution zone. The brightest
+  // recently hit cell keeps glowing dimly for a second after the level
+  // falls below it, so glanced-past peaks still register.
+  //
+  // PwNodePeakMonitor.peak is the cube root of linear amplitude (the
+  // PulseAudio perceptual volume curve) — measured: a -36 dBFS room
+  // read as peak 0.2505 = 0.01572^(1/3). So true dBFS is
+  // 60*log10(peak), and -60..0 maps to 0..1 as 1 + log10(peak).
+  readonly property int meterCells: 10
+  // The caution cell starts at -6 dBFS = 0.9 on the 0..1 scale; the
+  // accent cells split the range below it evenly.
+  readonly property real meterCaution: 0.9
+  readonly property real meterCellSpan: meterCaution / (meterCells - 1)
+  readonly property real meterLevel: micPeak.peak > 0
+    ? Util.clamp(1 + Math.log10(micPeak.peak), 0, 1) : 0
+  // Quantized once, so per-cell bindings re-evaluate only when the
+  // picture changes, not on every peak update (~50-100/s).
+  readonly property int meterLitCells: meterLevel > meterCaution
+    ? meterCells : Math.ceil(meterLevel / meterCellSpan)
+  property int meterHeldCell: -1
+  onMeterLitCellsChanged: {
+    // While the level covers the held cell the hold is invisible and
+    // needs no decay; the decay runs from the moment the level first
+    // drops below — started, not restarted, so fluctuation further
+    // down cannot extend a stale hold past its second.
+    if (meterLitCells - 1 >= meterHeldCell) { meterHeldCell = meterLitCells - 1; holdDecay.stop() }
+    else if (!holdDecay.running) holdDecay.start()
+  }
+  Timer {
+    id: holdDecay
+    interval: 1000
+    onTriggered: root.meterHeldCell = root.meterLitCells - 1
+  }
+
+  // ------------------------------------------------------------------- pin
+  // Pin: the mirror lifts out of the popup into a small always-on-top
+  // 16:9 window in the bottom-right corner — the panel's glass gone
+  // picture-in-picture. Drag anywhere to move it, drag the corner to
+  // resize (aspect locked by the compositor); the hover chip docks it
+  // back into the panel, Esc and the bar icon close it outright.
+  property bool pinned: false
+  // A mirror surface — panel or pin — is up: the gate for everything
+  // held only while you look (camera Loader, mic stream, watchdog).
+  readonly property bool showing: opened || pinned
+  // The window's only compositor identity (Qt has no per-window Wayland
+  // app id, so every Quickshell toplevel is org.quickshell): the rule
+  // and the placement dispatches all key on this one string.
+  readonly property string pinTitle: "Green Room"
+
+  // close() means "mirror off", pin included: the IPC `close` verb (and
+  // Esc, and toggle's closing half) must never leave a pinned camera
+  // running behind a closed panel — that is the privacy promise. pin()
+  // hides through the controller directly to keep its handoff ordering.
+  function close() {
+    root.pinned = false
+    root.controller.hide()
+  }
+
+  // Only a live mirror is worth pinning: with no picture in the panel
+  // there is no picture to lift out.
+  function pin() {
+    if (!root.live) return
+    // Size before the flip: the surface is created the moment pinned
+    // rises, and a size set after that is ignored for the initial
+    // configure. Then pinned rises before the panel hides, so the
+    // capture Loader's active never dips false mid-handoff. A dip would
+    // destroy and same-turn remount the camera, and the FFmpeg backend
+    // releases /dev/videoN asynchronously — the instant reopen of a
+    // still-held device stalls silently, with no frame and no error.
+    pinWindow.applySize()
+    root.pinned = true
+    root.controller.hide()
+  }
+
+  // A camera problem while pinned docks the mirror back into the panel:
+  // the pin is pure picture and cannot explain itself, the panel can
+  // (error text, "no camera found").
+  onCameraErrorChanged: if (cameraError !== "" && pinned) root.open()
+  onHasDevicesChanged: if (!hasDevices && pinned) root.open()
+
+  // Panel and pin are exclusive views of the one capture stack: opening
+  // the panel takes the mirror back. The first open also registers the
+  // pin window's compositor rule through the fork's runtime config eval —
+  // rules are the only lever that covers float, pin, aspect lock and the
+  // shell-wide default-opacity tag (visibly translucent over video),
+  // since the `window.*` dispatchers act only on the focused window.
+  // Deferred to here rather than widget load because every pin is
+  // preceded by an open (pin needs a live mirror), which leaves the
+  // async eval ample time to land before the surface maps; re-running
+  // it in a later session is behaviorally idempotent.
+  property bool pinRuleRegistered: false
+  onOpenedChanged: {
+    if (!opened) return
+    root.pinned = false
+    if (root.pinRuleRegistered) return
+    root.pinRuleRegistered = true
+    pinRuleProc.running = true
+  }
+
+  // Not fire-and-forget: a failed eval (IPC down, stock Hyprland without
+  // the fork's eval) would make every pin of the session map tiled and
+  // translucent with nothing attributing it to this plugin. A non-ok
+  // reply warns and re-arms the registration for the next open.
+  Process {
+    id: pinRuleProc
+    command: ["hyprctl", "eval",
+      'o.window({ class = "^org.quickshell$", title = "^' + root.pinTitle + '$" }, { '
+      + 'tag = "-default-opacity", opacity = "1 1", float = true, pin = true, '
+      + 'no_initial_focus = true, no_dim = true, keep_aspect_ratio = true })']
+    stdout: StdioCollector { id: pinRuleOut }
+    onExited: function(exitCode, exitStatus) {
+      if (pinRuleOut.text.trim() === "ok") return
+      console.warn("green-room", "pin window rule registration failed:",
+        pinRuleOut.text.trim() || ("exit " + exitCode), "- retrying on next open")
+      root.pinRuleRegistered = false
+    }
   }
 
   // ---------------------------------------------------------------- sizing
   // 16:9, the framing call participants actually see.
   readonly property int mirrorWidth: Util.clamp(root.setting("previewWidth", 560), 320, 960)
   readonly property int mirrorHeight: Math.round(root.mirrorWidth * 9 / 16)
+
+  // The pin window's width (16:9 follows). Written back when the user
+  // resizes the pinned window, so the chosen size sticks across pins;
+  // reader and writer share these bounds (mirrored in manifest.json).
+  readonly property int pinMinWidth: 240
+  readonly property int pinMaxWidth: 960
+  readonly property int pinWidth: Util.clamp(root.setting("pinWidth", 320), pinMinWidth, pinMaxWidth)
+  readonly property int pinHeight: Math.round(root.pinWidth * 9 / 16)
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -143,15 +277,74 @@ Panel {
       console.warn("green-room", "shell.updateEntryInline unavailable; setting", key, "will not survive a restart")
   }
 
+  // --------------------------------------------------------------- capture
+  // One capture stack serves both surfaces: the session re-targets its
+  // sink when the mirror moves between the popup glass and the pinned
+  // window, so the camera is opened once and never contended across the
+  // handoff.
+  Loader {
+    active: root.showing && root.hasDevices && !root.deviceRestart
+    onActiveChanged: {
+      if (!active) {
+        root.live = false
+        root.cameraError = ""
+      }
+    }
+    sourceComponent: Item {
+      id: captureStack
+      // The one place that decides which surface the frames feed. Bound
+      // here rather than on root: this evaluates at mount, when both
+      // video ids exist — a root-level binding can evaluate during
+      // widget creation, capture nothing, and never re-fire.
+      readonly property var sink: root.pinned ? pinVideo : panelVideo
+
+      Camera {
+        id: camera
+        active: true
+        // undefined (not null) keeps the property unset until a
+        // device resolves, at which point the binding re-evaluates.
+        cameraDevice: root.selectedDevice !== null ? root.selectedDevice : undefined
+        onErrorOccurred: function(error, errorString) {
+          if (error === Camera.NoError) return
+          console.warn("green-room", "camera error", error, errorString)
+          root.cameraError = String(errorString || "") || "Camera unavailable"
+        }
+      }
+      CaptureSession {
+        camera: camera
+        videoOutput: captureStack.sink
+      }
+      Connections {
+        target: captureStack.sink.videoSink
+        // One-shot once healthy: disabling drops the per-frame
+        // dispatch. Stays armed while errored so a frame from a
+        // recovered camera clears the stale error glass — errorOccurred
+        // never re-fires with NoError on its own.
+        enabled: !root.live || root.cameraError !== ""
+        function onVideoFrameChanged() {
+          root.cameraError = ""
+          root.live = true
+        }
+      }
+    }
+  }
+
   // ------------------------------------------------------------------- bar
   BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
     text: "󰴂"
-    active: root.opened && root.cameraError === ""
+    active: root.showing && root.cameraError === ""
     tooltipText: "Green Room"
-    onPressed: function(button) { if (button === Qt.LeftButton) root.toggle() }
+    // While pinned the icon is an off switch: the red icon reads as "on",
+    // so the click ends the pin, not detours through the panel — that
+    // stays one more click away for the rarer "back to the big mirror".
+    onPressed: function(button) {
+      if (button !== Qt.LeftButton) return
+      if (root.pinned) root.pinned = false
+      else root.toggle()
+    }
   }
 
   // ----------------------------------------------------------------- panel
@@ -179,6 +372,7 @@ Panel {
         if (t === "m") root.persistSetting("mirror", !root.mirrored)
         else if (t === "c") root.cycleDevice()
         else if (t === "a") root.persistSetting("micCheck", !root.micCheck)
+        else if (t === "p") root.pin()
       }
 
       // Glass content, rendered offscreen and drawn through the rounded
@@ -222,53 +416,9 @@ Panel {
           }
         }
 
-        Loader {
-          anchors.fill: parent
-          active: root.opened && root.hasDevices && !root.deviceRestart
-          onActiveChanged: {
-            if (!active) {
-              root.live = false
-              root.cameraError = ""
-            }
-          }
-          sourceComponent: VideoOutput {
-            id: videoOutput
-            anchors.fill: parent
-            fillMode: VideoOutput.PreserveAspectCrop
-            visible: root.cameraError === ""
-            opacity: root.live ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 220 } }
-            transform: Scale {
-              origin.x: videoOutput.width / 2
-              xScale: root.mirrored ? -1 : 1
-            }
-
-            Camera {
-              id: camera
-              active: true
-              // undefined (not null) keeps the property unset until a
-              // device resolves, at which point the binding re-evaluates.
-              cameraDevice: root.selectedDevice !== null ? root.selectedDevice : undefined
-              onErrorOccurred: function(error, errorString) {
-                if (error === Camera.NoError) return
-                console.warn("green-room", "camera error", error, errorString)
-                root.cameraError = String(errorString || "") || "Camera unavailable"
-              }
-            }
-            CaptureSession { camera: camera; videoOutput: videoOutput }
-            Connections {
-              target: videoOutput.videoSink
-              // One-shot once healthy: disabling drops the per-frame
-              // dispatch. Stays armed while errored so a frame from a
-              // recovered camera clears the stale error glass — errorOccurred
-              // never re-fires with NoError on its own.
-              enabled: !root.live || root.cameraError !== ""
-              function onVideoFrameChanged() {
-                root.cameraError = ""
-                root.live = true
-              }
-            }
-          }
+        MirrorVideo {
+          id: panelVideo
+          showing: !root.pinned
         }
       }
 
@@ -315,115 +465,7 @@ Panel {
 
       // Mic check meter: not hover-gated — you watch it while talking.
       // Before the scrim in draw order so the hover chrome wins overlaps.
-      // On the chips' dark plate so it separates from any scene: the plate
-      // carries it over bright video, the light unlit ticks over dark.
-      Rectangle {
-        visible: root.micCheck
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: Style.space(12)
-        anchors.bottomMargin: Style.space(10)
-        width: meterRow.width + Style.space(16)
-        height: Style.space(30)
-        radius: Style.cornerRadius
-        color: Qt.rgba(0, 0, 0, 0.45)
-        opacity: root.micMuted ? 0.45 : 1
-
-        // Hovering the meter names the metered mic: it follows the default
-        // source, and "wrong mic" (a forgotten headset) should be
-        // diagnosable in one glance.
-        HoverHandler { id: meterHover }
-
-        Row {
-          id: meterRow
-          anchors.centerIn: parent
-          spacing: Style.space(6)
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: root.micMuted ? "󰍭" : "󰍬"
-          color: Qt.rgba(1, 1, 1, 0.75)
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.icon
-        }
-
-        // Ten cells across -60..0 dBFS — 6 dB each, so syllable-scale
-        // dynamics (~6-8 dB) visibly move the meter while you talk: nine
-        // accent cells up to -6, then an urgent cell for the caution zone.
-        // The brightest recently hit cell
-        // keeps glowing dimly for a second after the level falls below it,
-        // so glanced-past peaks still register. No transition animations: a
-        // meter should be instant, and an animating cell inside the layered
-        // glass would keep the whole layer repainting.
-        //
-        // PwNodePeakMonitor.peak is the cube root of linear amplitude (the
-        // PulseAudio perceptual volume curve) — measured: a -36 dBFS room
-        // read as peak 0.2505 = 0.01572^(1/3). So true dBFS is
-        // 60*log10(peak), and -60..0 maps to 0..1 as 1 + log10(peak).
-        Row {
-          id: micMeter
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: Style.space(2)
-
-          readonly property int cells: 10
-          // The caution cell starts at -6 dBFS = 0.9 on the 0..1 scale;
-          // the accent cells split the range below it evenly.
-          readonly property real cautionLevel: 0.9
-          readonly property real cellSpan: cautionLevel / (cells - 1)
-          readonly property real level: micPeak.peak > 0
-            ? Util.clamp(1 + Math.log10(micPeak.peak), 0, 1) : 0
-          // Quantized once, so per-cell bindings re-evaluate only when the
-          // picture changes, not on every peak update (~50-100/s).
-          readonly property int litCells: level > cautionLevel
-            ? cells : Math.ceil(level / cellSpan)
-          property int heldCell: -1
-          onLitCellsChanged: {
-            // While the level covers the held cell the hold is invisible and
-            // needs no decay; the decay runs from the moment the level first
-            // drops below — started, not restarted, so fluctuation further
-            // down cannot extend a stale hold past its second.
-            if (litCells - 1 >= heldCell) { heldCell = litCells - 1; holdDecay.stop() }
-            else if (!holdDecay.running) holdDecay.start()
-          }
-
-          Timer {
-            id: holdDecay
-            interval: 1000
-            onTriggered: micMeter.heldCell = micMeter.litCells - 1
-          }
-
-          Repeater {
-            model: micMeter.cells
-
-            Rectangle {
-              required property int index
-              readonly property bool lit: index < micMeter.litCells
-              readonly property color onColor: index === micMeter.cells - 1
-                ? Color.urgent : Color.accent
-
-              width: Style.space(8)
-              height: Style.space(7)
-              // Light ticks on the dark plate, theme colors for the lit
-              // cells — the scale stays readable over any scene.
-              color: lit ? onColor
-                : index === micMeter.heldCell ? Util.alpha(onColor, 0.45)
-                : Qt.rgba(1, 1, 1, 0.12)
-            }
-          }
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          visible: meterHover.hovered
-          text: root.micSource
-            ? String(root.micSource.nickname || root.micSource.description || root.micSource.name)
-            : "no mic"
-          color: Qt.rgba(1, 1, 1, 0.75)
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
-        }
-        }
-      }
+      MicMeterPlate {}
 
       // Hover chrome: a bottom scrim with icon-only controls. Disabled while
       // faded out so an invisible chip cannot swallow a click.
@@ -471,6 +513,13 @@ Panel {
             hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
             onActivated: root.persistSetting("micCheck", !root.micCheck)
           }
+
+          ChipButton {
+            visible: root.live
+            glyph: "󰐃"
+            hint: "pop out (p)"
+            onActivated: root.pin()
+          }
         }
 
         // One caption slot for whichever chip is hovered: says what the
@@ -502,6 +551,215 @@ Panel {
         font.pixelSize: Style.font.body
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
+      }
+    }
+  }
+
+  // -------------------------------------------------------------- pin window
+  // The same glass, picture-in-picture. The compositor side (float, pin,
+  // opacity, aspect lock) comes from the rule registered above; the
+  // window side is plain QML: native interactive move from a drag
+  // anywhere, native resize from the corner grip.
+  FloatingWindow {
+    id: pinWindow
+    visible: root.pinned
+    title: root.pinTitle
+    color: "#0a0a0c"
+
+    // Imperative on purpose, called by pin() before the visibility flip:
+    // the initial configure ignores sizes set after the surface exists,
+    // and a declarative binding can evaluate before root's properties
+    // during widget creation and stick at an invalid size.
+    function applySize() {
+      implicitWidth = root.pinWidth
+      implicitHeight = root.pinHeight
+    }
+
+    // Corner placement once per map — a rule cannot express "monitor edge
+    // minus this window's size", so it is a dispatch. The focus sandwich
+    // is load-bearing: every `window.*` dispatcher acts only on the
+    // focused window (the selector merely filters), so the window is
+    // focused for the move and focus handed straight back.
+    onBackingWindowVisibleChanged: if (backingWindowVisible) pinPlace.start()
+    Timer {
+      id: pinPlace
+      interval: 150
+      onTriggered: {
+        // The pin can be gone again before this fires — then the focus
+        // sandwich would only yank the user's focus for nothing.
+        if (!root.pinned || !pinWindow.screen) return
+        var s = pinWindow.screen
+        Hyprland.dispatch("hl.dsp.focus({ window = [[title:^" + root.pinTitle + "$]] })")
+        Hyprland.dispatch("hl.dsp.window.move({ title = [[^" + root.pinTitle + "$]], x = "
+          + (s.x + s.width - pinWindow.implicitWidth - 40) + ", y = "
+          + (s.y + s.height - pinWindow.implicitHeight - 40) + " })")
+        Hyprland.dispatch("hl.dsp.focus({ last = true })")
+      }
+    }
+
+    // A user resize that settles becomes the new default pin size,
+    // clamped with the same bounds the reader applies so the stored
+    // setting always matches a size the pin can actually take.
+    onWidthChanged: if (backingWindowVisible) pinSizeSave.restart()
+    Timer {
+      id: pinSizeSave
+      interval: 1000
+      onTriggered: {
+        if (!root.pinned) return
+        var w = Util.clamp(Math.round(pinWindow.width), root.pinMinWidth, root.pinMaxWidth)
+        if (w !== root.pinWidth) root.persistSetting("pinWidth", w)
+      }
+    }
+
+    Item {
+      id: pinContent
+      anchors.fill: parent
+      focus: true
+      Keys.onEscapePressed: root.pinned = false
+
+      MirrorVideo {
+        id: pinVideo
+        showing: root.pinned
+      }
+
+      // Plain drag anywhere moves the window — PiP manners. target: null
+      // so nothing moves client-side; the compositor drives the whole
+      // interaction. Chip clicks still land: a press without movement
+      // never activates the handler.
+      DragHandler {
+        target: null
+        acceptedButtons: Qt.LeftButton
+        onActiveChanged: if (active) pinContent.Window.window.startSystemMove()
+      }
+
+      HoverHandler { id: pinHover }
+
+      MicMeterPlate {}
+
+      // Corner resize grip: invisible, the cursor change is the affordance.
+      // The compositor keeps 16:9 (keep_aspect_ratio in the rule).
+      Item {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        width: Style.space(24)
+        height: Style.space(24)
+        HoverHandler { cursorShape: Qt.SizeFDiagCursor }
+        DragHandler {
+          target: null
+          acceptedButtons: Qt.LeftButton
+          onActiveChanged: if (active) pinContent.Window.window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
+        }
+      }
+
+      // Dock the mirror back into the panel — the reverse of the pin chip,
+      // wearing a restore glyph rather than a pin: this is "go back", not
+      // "turn off" (Esc and the bar icon close outright). open() raises
+      // opened, whose handler clears pinned — the same seamless sink
+      // retarget as pinning, in reverse.
+      ChipButton {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: Style.space(8)
+        glyph: "󰖲"
+        opacity: pinHover.hovered ? 1 : 0
+        enabled: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+        onActivated: root.open()
+      }
+    }
+  }
+
+  // The live mirror image: one per surface, fed by the capture session
+  // one at a time. `showing` keeps the inactive surface faded so a stale
+  // last frame never lingers behind the active one.
+  component MirrorVideo: VideoOutput {
+    id: video
+
+    required property bool showing
+
+    anchors.fill: parent
+    fillMode: VideoOutput.PreserveAspectCrop
+    visible: root.cameraError === ""
+    opacity: root.live && showing ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: 220 } }
+    transform: Scale {
+      origin.x: video.width / 2
+      xScale: root.mirrored ? -1 : 1
+    }
+  }
+
+  // The mic meter on its dark plate, shared by the panel glass and the
+  // pinned window; the level math and peak-hold live at root (the meter
+  // reads one mic, not one surface), so the hold survives the handoff
+  // and updates run once. The plate separates the meter from any scene:
+  // it carries the cells over bright video, the light unlit ticks over
+  // dark.
+  component MicMeterPlate: Rectangle {
+    visible: root.micCheck
+    anchors.left: parent.left
+    anchors.bottom: parent.bottom
+    anchors.leftMargin: Style.space(12)
+    anchors.bottomMargin: Style.space(10)
+    width: meterRow.width + Style.space(16)
+    height: Style.space(30)
+    radius: Style.cornerRadius
+    color: Qt.rgba(0, 0, 0, 0.45)
+    opacity: root.micMuted ? 0.45 : 1
+
+    // Hovering the meter names the metered mic: it follows the default
+    // source, and "wrong mic" (a forgotten headset) should be
+    // diagnosable in one glance.
+    HoverHandler { id: meterHover }
+
+    Row {
+      id: meterRow
+      anchors.centerIn: parent
+      spacing: Style.space(6)
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.micMuted ? "󰍭" : "󰍬"
+        color: Qt.rgba(1, 1, 1, 0.75)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.icon
+      }
+
+      Row {
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(2)
+
+        Repeater {
+          model: root.meterCells
+
+          Rectangle {
+            required property int index
+            readonly property bool lit: index < root.meterLitCells
+            readonly property color onColor: index === root.meterCells - 1
+              ? Color.urgent : Color.accent
+
+            width: Style.space(8)
+            height: Style.space(7)
+            // Light ticks on the dark plate, theme colors for the lit
+            // cells — the scale stays readable over any scene. No color
+            // Behavior on purpose: a meter should be instant, and an
+            // animating cell inside the panel's layered glass would keep
+            // the whole layer repainting.
+            color: lit ? onColor
+              : index === root.meterHeldCell ? Util.alpha(onColor, 0.45)
+              : Qt.rgba(1, 1, 1, 0.12)
+          }
+        }
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: meterHover.hovered
+        text: root.micSource
+          ? String(root.micSource.nickname || root.micSource.description || root.micSource.name)
+          : "no mic"
+        color: Qt.rgba(1, 1, 1, 0.75)
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
       }
     }
   }

@@ -2,12 +2,13 @@
 
 ## The capture lifecycle
 
-The whole capture stack — `Camera`, `CaptureSession`, `VideoOutput` — lives inside one `Loader`
-whose `active` is bound to the panel's open state, gated on a device existing:
+The capture stack — `Camera` and `CaptureSession` — lives inside one root-level `Loader`
+whose `active` is bound to either mirror surface (panel or pin) being open, gated on a device
+existing; the session targets whichever surface's `VideoOutput` is showing:
 
 ```
-panel opens  -> Loader mounts the stack -> Camera streams -> first frame -> glass fades in
-panel closes -> Loader destroys the stack -> /dev/videoN released
+mirror opens  -> Loader mounts the stack -> Camera streams -> first frame -> glass fades in
+mirror closes -> Loader destroys the stack -> /dev/videoN released
 ```
 
 There is no explicit stop anywhere: destruction is the off switch.
@@ -54,15 +55,42 @@ The top cell starts at -6 dBFS — the conventional caution zone — and lights 
 urgent color; the brightest recently hit cell holds for a second so a peak that lands between
 glances still registers. Unlike the camera, it needs no
 teardown dance: the monitor's `node` is set only while the check is on, and its PipeWire capture
-stream exists only while the panel is also open. So the microphone follows the camera's privacy
-story — held only while you look — and `pw-dump` shows the "Quickshell Peak Detect" stream
-appearing and vanishing with the panel. The node reference alone keeps the source bound (binding
+stream exists only while a mirror is also showing (panel or pin). So the microphone follows the
+camera's privacy story — held only while you look — and `pw-dump` shows the "Quickshell Peak
+Detect" stream appearing and vanishing with the mirror. The node reference alone keeps the source bound (binding
 is not capture), which is what makes `audio.muted` readable; a muted or missing mic shows the
 slashed glyph instead of a silently flat bar. Stream errors are invisible to QML — Quickshell
 only logs them, and the meter reads zero — so instead of an error glass there is a watchdog: a
 meter flat for ten straight seconds gets its node rebound, which is invisible on a genuinely
 quiet mic and revives a stream killed by, say, a Bluetooth headset's profile switch (verified by
 destroying the stream node with `pw-cli` and watching it return).
+
+## The pin
+
+Pinning lifts the panel's glass into a small always-on-top `FloatingWindow` — same video
+pipeline, same mic meter, picture-in-picture manners: drag anywhere to move (the drag handler
+calls the backing window's native `startSystemMove`, so the compositor drives the whole
+interaction), an invisible corner grip for `startSystemResize`, and a settled resize becomes
+the new default size.
+
+The compositor treatment — float, pin to every workspace, full opacity, no dim, no focus
+steal, locked 16:9 — is one window rule the plugin registers on the first panel open (every
+pin is preceded by one, which leaves the async eval ample time to land) through the fork's
+runtime config eval (`hyprctl eval 'o.window(...)'`), keyed on the window title since every
+Quickshell toplevel shares the `org.quickshell` app id (Qt has no per-window Wayland app id).
+A rule is the only lever that covers all of it: the shell-wide `default-opacity` tag, visibly
+translucent over video, yields to nothing else, and the `window.*` dispatchers act only on the
+focused window (their selectors merely filter), which makes scripted correction fragile. The
+one dispatch that remains is corner placement at map — a rule cannot express "monitor edge
+minus this window's size" — and it runs inside a focus sandwich for exactly that reason.
+
+The camera never blinks across the handoff: one capture stack lives in a root-level Loader
+gated on either surface being open, and `CaptureSession.videoOutput` simply retargets between
+the panel's sink and the pin's. Two ordering rules keep it seamless: `pin()` raises `pinned`
+before closing the panel so the Loader's `active` never dips (a same-turn remount races the
+FFmpeg backend's asynchronous device release and stalls silently), and the pin window is sized
+imperatively before it is shown (a declarative size binding can evaluate before the widget's
+own properties during creation and the surface would map at a fallback size).
 
 ## Why the mirror flip is a transform
 
