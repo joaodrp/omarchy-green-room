@@ -44,8 +44,10 @@ arrives, then the video fades in. Hover for the controls:
 | Pop out | `p` | Lift the mirror into a corner window |
 | | `esc` | Close |
 
-The mic chip stays reachable even when the camera is missing or broken, so you can still check
-your mic.
+<img src="docs/images/hover-chip.png" alt="The pointer on the flip chip, with its caption above the controls" width="575">
+
+Hovering a chip shows what it does and its key. The mic chip stays reachable even when the
+camera is missing or broken, so you can still check your mic.
 
 ### Flip
 
@@ -62,6 +64,8 @@ Ten cells across -60..0 dBFS, 6 dB each, so speech lands mid-meter the way it do
 mic-check UIs and syllables visibly move it. The top cell starts at -6 dBFS and lights in the
 theme's urgent color. The brightest recently hit cell keeps glowing for a second, so a peak that
 lands between glances still registers.
+
+<img src="docs/images/hover-meter.png" alt="The pointer on the meter, which now also names the microphone it reads" width="575">
 
 Hover the meter to see which microphone it reads. It follows the system default, so a
 forgotten headset shows up here. A muted or missing mic shows a slashed glyph instead of a
