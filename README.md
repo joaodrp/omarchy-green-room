@@ -20,7 +20,7 @@ see yourself in a mirrored live preview, click again and the camera is off.
   read only while the mirror is showing
 - Pin (`p`): the mirror lifts out of the popup into a small always-on-top
   16:9 window in the bottom-right corner that follows you across
-  workspaces — drag anywhere to move it, drag its corner to resize
+  workspaces — drag anywhere to move it, drag any corner to resize
   (aspect stays locked, the size sticks); the hover chip docks it back
   into the panel, while a click on the bar icon — or Esc, once the
   window has focus — closes it outright; the mic meter comes along when

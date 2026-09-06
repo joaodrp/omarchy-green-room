@@ -705,18 +705,31 @@ Panel {
 
       MicMeterPlate {}
 
-      // Corner resize grip: invisible, the cursor change is the affordance.
-      // The compositor keeps 16:9 (keep_aspect_ratio in the rule).
-      Item {
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        width: Style.space(24)
-        height: Style.space(24)
-        HoverHandler { cursorShape: Qt.SizeFDiagCursor }
-        DragHandler {
-          target: null
-          acceptedButtons: Qt.LeftButton
-          onActiveChanged: if (active) pinContent.Window.window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
+      // Resize grips in all four corners, since the window can sit in any
+      // corner of the screen: invisible, the cursor change is the
+      // affordance. The compositor keeps 16:9 (keep_aspect_ratio in the
+      // rule).
+      Repeater {
+        model: [
+          { edges: Qt.TopEdge | Qt.LeftEdge, cursor: Qt.SizeFDiagCursor },
+          { edges: Qt.TopEdge | Qt.RightEdge, cursor: Qt.SizeBDiagCursor },
+          { edges: Qt.BottomEdge | Qt.LeftEdge, cursor: Qt.SizeBDiagCursor },
+          { edges: Qt.BottomEdge | Qt.RightEdge, cursor: Qt.SizeFDiagCursor }
+        ]
+        Item {
+          required property var modelData
+          anchors.left: modelData.edges & Qt.LeftEdge ? parent.left : undefined
+          anchors.right: modelData.edges & Qt.RightEdge ? parent.right : undefined
+          anchors.top: modelData.edges & Qt.TopEdge ? parent.top : undefined
+          anchors.bottom: modelData.edges & Qt.BottomEdge ? parent.bottom : undefined
+          width: Style.space(24)
+          height: Style.space(24)
+          HoverHandler { cursorShape: modelData.cursor }
+          DragHandler {
+            target: null
+            acceptedButtons: Qt.LeftButton
+            onActiveChanged: if (active) pinContent.Window.window.startSystemResize(modelData.edges)
+          }
         }
       }
 

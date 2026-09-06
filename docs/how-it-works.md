@@ -70,8 +70,9 @@ destroying the stream node with `pw-cli` and watching it return).
 Pinning lifts the panel's glass into a small always-on-top `FloatingWindow` — same video
 pipeline, same mic meter, picture-in-picture manners: drag anywhere to move (the drag handler
 calls the backing window's native `startSystemMove`, so the compositor drives the whole
-interaction), an invisible corner grip for `startSystemResize`, and a settled resize becomes
-the new default size.
+interaction), an invisible grip in each corner for `startSystemResize` (the window can sit in
+any corner of the screen, so every corner must resize toward the opposite one), and a settled
+resize becomes the new default size.
 
 The compositor treatment — float, pin to every workspace, full opacity, no dim, no focus
 steal, locked 16:9 — is one window rule the plugin registers on the first panel open (every
