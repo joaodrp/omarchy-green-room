@@ -535,8 +535,10 @@ Panel {
       }
 
       // Mic check meter: not hover-gated — you watch it while talking.
-      // Before the scrim in draw order so the hover chrome wins overlaps.
-      MicMeterPlate {}
+      // Before the scrim in draw order so the hover chrome wins overlaps,
+      // except while the meter itself is hovered: then the plate widens
+      // with the mic's name into the pill's space, so the chrome yields.
+      MicMeterPlate { id: panelMeter }
 
       // Hover chrome: a bottom scrim with icon-only controls. Disabled while
       // faded out so an invisible chip cannot swallow a click.
@@ -550,7 +552,8 @@ Panel {
         // Shown over live video and over the no-camera/error glass alike:
         // the mic chip must stay reachable with a dead camera, which is
         // exactly when "at least check my mic" matters.
-        opacity: hoverArea.hovered && (root.live || !root.hasDevices || root.cameraError !== "") ? 1 : 0
+        opacity: hoverArea.hovered && !panelMeter.hovered
+          && (root.live || !root.hasDevices || root.cameraError !== "") ? 1 : 0
         enabled: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
         gradient: Gradient {
@@ -836,6 +839,7 @@ Panel {
     // source, and "wrong mic" (a forgotten headset) should be
     // diagnosable in one glance.
     HoverHandler { id: meterHover }
+    readonly property alias hovered: meterHover.hovered
 
     Row {
       id: meterRow
