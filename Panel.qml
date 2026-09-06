@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Effects
 import QtMultimedia
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
@@ -157,7 +156,7 @@ Panel {
   readonly property bool showing: opened || pinned
   // The window's only compositor identity (Qt has no per-window Wayland
   // app id, so every Quickshell toplevel is org.quickshell): the rule
-  // and the placement dispatches all key on this one string.
+  // keys on this one string.
   readonly property string pinTitle: "Green Room"
 
   // close() means "mirror off", pin included: the IPC `close` verb (and
@@ -194,13 +193,15 @@ Panel {
   // Panel and pin are exclusive views of the one capture stack: opening
   // the panel takes the mirror back. The first open also registers the
   // pin window's compositor rule through the fork's runtime config eval —
-  // rules are the only lever that covers float, pin, aspect lock and the
-  // shell-wide default-opacity tag (visibly translucent over video),
-  // since the `window.*` dispatchers act only on the focused window.
-  // Deferred to here rather than widget load because every pin is
-  // preceded by an open (pin needs a live mirror), which leaves the
-  // async eval ample time to land before the surface maps; re-running
-  // it in a later session is behaviorally idempotent.
+  // rules are the only lever that covers float, pin, aspect lock, corner
+  // placement and the shell-wide default-opacity tag (visibly
+  // translucent over video): the `window.*` dispatchers act only on the
+  // focused window, and focusing the pin to place it drags the user to
+  // whatever workspace the focus handback lands on. Deferred to here
+  // rather than widget load because every pin is preceded by an open
+  // (pin needs a live mirror), which leaves the async eval ample time
+  // to land before the surface maps; a rule with the same match
+  // replaces the previous one, so re-running it is idempotent.
   property bool pinRuleRegistered: false
   onOpenedChanged: {
     if (!opened) return
@@ -219,7 +220,10 @@ Panel {
     command: ["hyprctl", "eval",
       'o.window({ class = "^org.quickshell$", title = "^' + root.pinTitle + '$" }, { '
       + 'tag = "-default-opacity", opacity = "1 1", float = true, pin = true, '
-      + 'no_initial_focus = true, no_dim = true, keep_aspect_ratio = true })']
+      + 'no_initial_focus = true, no_dim = true, keep_aspect_ratio = true, '
+      // Bottom-right corner with a 40px margin, in the compositor's own
+      // variables — evaluated at map against this window's size.
+      + 'move = "monitor_w-window_w-40 monitor_h-window_h-40" })']
     stdout: StdioCollector { id: pinRuleOut }
     onExited: function(exitCode, exitStatus) {
       if (pinRuleOut.text.trim() === "ok") return
@@ -661,8 +665,8 @@ Panel {
 
   // -------------------------------------------------------------- pin window
   // The same glass, picture-in-picture. The compositor side (float, pin,
-  // opacity, aspect lock) comes from the rule registered above; the
-  // window side is plain QML: native interactive move from a drag
+  // opacity, aspect lock, corner placement) comes from the rule
+  // registered above; the window side is plain QML: native interactive move from a drag
   // anywhere, native resize from the corner grip.
   FloatingWindow {
     id: pinWindow
@@ -677,28 +681,6 @@ Panel {
     function applySize() {
       implicitWidth = root.pinWidth
       implicitHeight = root.pinHeight
-    }
-
-    // Corner placement once per map — a rule cannot express "monitor edge
-    // minus this window's size", so it is a dispatch. The focus sandwich
-    // is load-bearing: every `window.*` dispatcher acts only on the
-    // focused window (the selector merely filters), so the window is
-    // focused for the move and focus handed straight back.
-    onBackingWindowVisibleChanged: if (backingWindowVisible) pinPlace.start()
-    Timer {
-      id: pinPlace
-      interval: 150
-      onTriggered: {
-        // The pin can be gone again before this fires — then the focus
-        // sandwich would only yank the user's focus for nothing.
-        if (!root.pinned || !pinWindow.screen) return
-        var s = pinWindow.screen
-        Hyprland.dispatch("hl.dsp.focus({ window = [[title:^" + root.pinTitle + "$]] })")
-        Hyprland.dispatch("hl.dsp.window.move({ title = [[^" + root.pinTitle + "$]], x = "
-          + (s.x + s.width - pinWindow.implicitWidth - 40) + ", y = "
-          + (s.y + s.height - pinWindow.implicitHeight - 40) + " })")
-        Hyprland.dispatch("hl.dsp.focus({ last = true })")
-      }
     }
 
     // A user resize that settles becomes the new default pin size,

@@ -75,15 +75,18 @@ any corner of the screen, so every corner must resize toward the opposite one), 
 resize becomes the new default size.
 
 The compositor treatment — float, pin to every workspace, full opacity, no dim, no focus
-steal, locked 16:9 — is one window rule the plugin registers on the first panel open (every
-pin is preceded by one, which leaves the async eval ample time to land) through the fork's
-runtime config eval (`hyprctl eval 'o.window(...)'`), keyed on the window title since every
-Quickshell toplevel shares the `org.quickshell` app id (Qt has no per-window Wayland app id).
-A rule is the only lever that covers all of it: the shell-wide `default-opacity` tag, visibly
-translucent over video, yields to nothing else, and the `window.*` dispatchers act only on the
-focused window (their selectors merely filter), which makes scripted correction fragile. The
-one dispatch that remains is corner placement at map — a rule cannot express "monitor edge
-minus this window's size" — and it runs inside a focus sandwich for exactly that reason.
+steal, locked 16:9, and the bottom-right placement — is one window rule the plugin registers on
+the first panel open (every pin is preceded by one, which leaves the async eval ample time to
+land) through the fork's runtime config eval (`hyprctl eval 'o.window(...)'`), keyed on the
+window title since every Quickshell toplevel shares the `org.quickshell` app id (Qt has no
+per-window Wayland app id). A rule is the only lever that covers all of it: the shell-wide
+`default-opacity` tag, visibly translucent over video, yields to nothing else, and the
+`window.*` dispatchers act only on the focused window (their selectors merely filter), so
+placing the window by dispatch means focusing it first — and the focus handback can land on
+another workspace and drag the user there. The rule's `move` takes the compositor's own
+variables (`monitor_w-window_w-40 monitor_h-window_h-40`), evaluated at map against this
+window's size, so nothing is dispatched at all. A rule with the same match replaces the earlier
+one, which is what makes re-registration idempotent.
 
 The camera never blinks across the handoff: one capture stack lives in a root-level Loader
 gated on either surface being open, and `CaptureSession.videoOutput` simply retargets between
