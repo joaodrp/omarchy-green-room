@@ -15,7 +15,7 @@ when the panel opens.
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
 | `preview.png` | The README hero, and the listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
-| `.github/` | CI, and the manifest check it runs |
+| `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check, and the release automation; see [Releases](#releases) |
 
 ## Running it
 
@@ -121,6 +121,15 @@ current state, never the change — git history holds that.
 
 [Conventional Commits](https://www.conventionalcommits.org/), one logical change each. Describe
 what the change does and why, in the body, with backticks around identifiers.
+
+## Releases
+
+[release-please](https://github.com/googleapis/release-please) reads the Conventional Commits on
+`main` and keeps a release pull request open with the next version and the changelog. Merging
+it bumps `version` in `manifest.json` (and `version.txt`), tags `vX.Y.Z` and publishes the
+GitHub release; CI checks that the tag and the manifest agree. `feat` bumps the minor version,
+`fix` the patch, a `!` or `BREAKING CHANGE` footer the major. The release pull request is
+opened with the workflow token, so CI does not run on it; the merge commit is checked as usual.
 
 ## Scope
 
