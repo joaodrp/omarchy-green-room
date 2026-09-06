@@ -123,7 +123,5 @@ what the change does and why, in the body, with backticks around identifiers.
 
 ## Scope
 
-One glance, one mirror. Camera tuning belongs to
-[Webcam Controls](https://github.com/kristoferlund/omarchy-webcam); effects belong to
-[Camera Effects](https://github.com/alanfortlink/camera-effects). This plugin stays the thing you
-click before a meeting.
+One glance, one mirror. Camera tuning and effects are out of scope; this plugin stays the thing
+you click before a meeting.
