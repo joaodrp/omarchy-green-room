@@ -640,6 +640,8 @@ Panel {
           anchors.bottom: parent.bottom
           anchors.bottomMargin: Style.space(54)
           text: root.hoveredChip ? root.hoveredChip.hint : ""
+          // Plain text: a camera's description is the device's own string.
+          textFormat: Text.PlainText
           visible: root.hoveredChip !== null
           color: Qt.rgba(1, 1, 1, 0.75)
           font.family: root.fontFamily
@@ -657,6 +659,7 @@ Panel {
         // out of an error is a remount — tell the user which one they have.
         text: !root.hasDevices ? "No camera found"
           : root.cameraError + "\nReopen to retry."
+        textFormat: Text.PlainText
         color: Qt.rgba(1, 1, 1, 0.6)
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
@@ -887,6 +890,8 @@ Panel {
         text: root.micSource
           ? String(root.micSource.nickname || root.micSource.description || root.micSource.name)
           : "no mic"
+        // Plain text: the name is whatever the device advertises.
+        textFormat: Text.PlainText
         color: Qt.rgba(1, 1, 1, 0.75)
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
