@@ -47,6 +47,13 @@ arrives, then the video fades in. Hover for the controls:
 The mic chip stays reachable when the camera is missing or broken, which is exactly when "at
 least check my mic" matters.
 
+### Flip
+
+<img src="docs/images/flip.png" alt="Two mirrors side by side: mirrored, and as others see you" width="575">
+
+Mirrored by default, because that is how you fix your hair. `m` shows the picture the other
+side of the call gets; a snapshot saves whichever is showing.
+
 ### Mic check
 
 <img src="docs/images/mic-check.png" alt="The mirror with the level meter lit to mid-scale in the bottom-left corner" width="575">
@@ -79,6 +86,8 @@ the bar icon, or `esc` once the window has focus, closes it outright. The mic me
 when the check is on.
 
 ### Snapshot
+
+<img src="docs/images/snapshot.png" alt="The mirror just after a snapshot, with the saved notification and its thumbnail at the top right" width="575">
 
 `s` saves what the glass shows, mirrored or not, 16:9, at camera resolution, as a PNG in your
 screenshot directory, copies it to the clipboard, and sends the same notification a screenshot
