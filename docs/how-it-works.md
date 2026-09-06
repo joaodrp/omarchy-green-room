@@ -1,5 +1,8 @@
 # How it works
 
+Detail behind the [README](../README.md): why the camera and the microphone are held the way
+they are, and the findings each part of the panel rests on.
+
 ## The capture lifecycle
 
 The capture stack — `Camera` and `CaptureSession` — lives inside one root-level `Loader`

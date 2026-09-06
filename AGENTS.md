@@ -22,9 +22,12 @@ CONTRIBUTING.md's Gotchas has why `Camera.active = false` is not enough.
 **There are no tests that prove the panel draws.** A clean `qmllint` and a loading shell say the
 file parses, not that video renders or the hover chrome appears. Look at it.
 
-**Look at it properly.** `grim` captures, `hyprctl dispatch movecursor` drives hover. The display
-is scale 2, so captured pixels are twice the logical size. Never kill `grim` mid-capture: it
-wedges the compositor's screencopy, and every later capture hangs until that clears.
+**Look at it properly.** `grim` captures. A cursor warp (`hyprctl dispatch 'hl.dsp.cursor.move({ x = ..., y = ... })'`)
+generates no motion event, so follow it with `wlrctl pointer move 2 2` to trigger hover. The
+display is scale 2, so captured pixels are twice the logical size. `grim` hangs while the
+display is DPMS-off or the session is locked; check `hyprctl monitors -j` before blaming the
+capture. Never kill `grim` mid-capture: it wedges the compositor's screencopy, and every later
+capture hangs until that clears.
 
 **Check the log with `-p`.** `qs log` without `-p "$OMARCHY_PATH/shell"` prints nothing useful, so
 an empty result is not evidence of a clean load.

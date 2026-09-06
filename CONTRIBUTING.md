@@ -13,6 +13,8 @@ when the panel opens.
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
+| `docs/images/`, `preview.png` | README screenshots; see [Screenshots](#screenshots) |
+| `.github/` | CI, and the manifest check it runs |
 
 ## Running it
 
@@ -34,6 +36,7 @@ qs log -p "$OMARCHY_PATH/shell" --tail 60   # QML errors land here, and only wit
 
 ```sh
 omarchy plugin validate "$PWD"
+python3 .github/check-manifest.py   # manifest, README table and Panel.qml reads agree
 
 # QML lint needs an import dir holding a `qs` symlink to the shell
 mkdir -p /tmp/qslint && ln -sfn "$OMARCHY_PATH/shell" /tmp/qslint/qs
@@ -56,6 +59,31 @@ fuser /dev/video0        # nothing within ~2s
 ```
 
 and look at the panel.
+
+CI runs the manifest check. `omarchy plugin validate` and the linter need Omarchy and Quickshell
+on the machine, so run those two yourself.
+
+## Screenshots
+
+The README pictures show a generated person, not a contributor's room. To reshoot them, feed
+the panel a clip instead of the webcam: make a looping video from the image, then, in a local
+patch you do not commit, replace the `Camera` inside the capture stack with a `MediaPlayer`
+that targets the same sink:
+
+```sh
+ffmpeg -loop 1 -i face.png -t 5 -pix_fmt yuv420p -r 30 fake.mp4
+```
+
+```qml
+MediaPlayer { source: "file:///path/to/fake.mp4"; videoOutput: captureStack.sink
+              loops: MediaPlayer.Infinite; Component.onCompleted: play() }
+```
+
+The `live` flag, the chrome, the meter, the guides and the pin all behave as with a camera,
+since every one of them hangs off the sink; only the snapshot does not, as `ImageCapture` needs
+a real `Camera`. Capture with `grim`, then crop; the display is scale 2, so captured pixels are
+twice the logical size. A cursor warp (`hl.dsp.cursor.move`) generates no motion event, so
+follow it with a `wlrctl pointer move 2 2` to make the hover chrome appear.
 
 ## Conventions
 
