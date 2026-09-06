@@ -13,7 +13,7 @@ see yourself in a mirrored live preview, click again and the camera is off.
   busy in the background
 - Controls appear only on hover: flip (`m`), next camera (`c`, only with
   more than one camera; the choice is persisted), mic check (`a`),
-  pin (`p`)
+  snapshot (`s`), pin (`p`)
 - Optional mic check: a segmented input level meter on the glass,
   dBFS-scaled so speech lands mid-meter, with a peak-hold and an urgent
   top cell when the input runs hot; the microphone, like the camera, is
@@ -25,6 +25,10 @@ see yourself in a mirrored live preview, click again and the camera is off.
   into the panel, while a click on the bar icon — or Esc, once the
   window has focus — closes it outright; the mic meter comes along when
   the mic check is on
+- Snapshot (`s`): saves what the glass shows — mirrored or not, 16:9,
+  at camera resolution — as a PNG, treated like any Omarchy screenshot:
+  same directory, copied to the clipboard, and a notification that
+  opens the editor on click
 - Keybindable: `omarchy-shell io.github.joaodrp.green-room toggle`
 
 ## Requirements
@@ -56,8 +60,8 @@ camera tuning tool with a preview attached; [Camera
 Preview](https://github.com/mandavkarpranjal/cam-preview) predates Qt
 versions where live video works in the shell and renders a still-capture
 slideshow. Green Room is just the pre-meeting check: one click, live
-video, mirrored, with an optional mic meter and a pinnable corner
-mirror — nothing else.
+video, mirrored, with an optional mic meter, a pinnable corner mirror
+and a snapshot — nothing else.
 
 ## License
 

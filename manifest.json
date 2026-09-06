@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Green Room",
-    "description": "Click the bar icon, see yourself in a mirrored live preview, with an optional mic level meter and a pinnable corner mirror. Camera and mic are released the moment no mirror is showing.",
+    "description": "Click the bar icon, see yourself in a mirrored live preview, with an optional mic level meter, a pinnable corner mirror and a snapshot. Camera and mic are released the moment no mirror is showing.",
     "category": "Hardware",
     "allowMultiple": false,
     "defaultSection": "right",

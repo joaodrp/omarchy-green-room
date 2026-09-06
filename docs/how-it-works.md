@@ -95,4 +95,20 @@ own properties during creation and the surface would map at a fallback size).
 ## Why the mirror flip is a transform
 
 Mirroring is `Scale { xScale: -1 }` on the `VideoOutput` — render-side only. The pipeline never
-touches pixels, and anything downstream (a future snapshot) sees the unmirrored frame for free.
+touches pixels, so the snapshot below starts from the camera's true frame.
+
+## The snapshot
+
+The frame comes from the capture session's own `ImageCapture` — the camera's frame at sensor
+resolution, not a grab of the scaled glass. It is then made into the glass's picture in place:
+`magick` flips it when the mirror is on and center-crops it to 16:9 (a webcam sensor is usually
+4:3; the glass shows the same crop via `PreserveAspectCrop`), so what you saw is what you get and
+the `m` key doubles as "snapshot as others see me".
+
+From there the snapshot is an Omarchy screenshot: the directory is resolved by the same rule as
+`omarchy-capture-screenshot` (`OMARCHY_SCREENSHOT_DIR`, else the XDG pictures dir, else
+`~/Pictures`, created if missing), the file goes on the clipboard with `wl-copy`, and the
+notification carries the same wording and `--exec` as a screenshot's, so a click or the "invoke
+last notification" keybind opens the screenshot editor on it. A failed capture is a critical
+notification with the backend's message; the glass itself never shows snapshot state beyond the
+shutter flash.

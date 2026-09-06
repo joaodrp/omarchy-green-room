@@ -225,6 +225,58 @@ Panel {
     }
   }
 
+  // -------------------------------------------------------------- snapshot
+  // Snapshot: what the glass shows — the mirror setting and the 16:9
+  // crop as you see them — handled like any omarchy screenshot from
+  // there on: saved to the screenshot directory, copied to the
+  // clipboard, announced by a notification that opens the editor on
+  // click. The frame comes from the capture session's own ImageCapture,
+  // so it is the camera's, at sensor resolution, never the scaled glass;
+  // mirror and crop are applied to the file afterwards.
+  signal snapshotSaved(string path)
+  function snapshot() {
+    if (!root.live || snapshotDir.running) return
+    snapshotDir.running = true
+  }
+
+  // The directory is resolved per snapshot by omarchy-capture-screenshot's
+  // own rule (env override, XDG pictures dir, ~/Pictures) and created the
+  // way that script creates it, so a snapshot always lands beside the
+  // screenshots.
+  Process {
+    id: snapshotDir
+    command: ["bash", "-c",
+      '[[ -f ~/.config/user-dirs.dirs ]] && source ~/.config/user-dirs.dirs; '
+      + 'd="${OMARCHY_SCREENSHOT_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}}"; mkdir -p "$d" && echo "$d"']
+    stdout: StdioCollector { id: snapshotDirOut }
+    onExited: function(exitCode, exitStatus) {
+      var dir = snapshotDirOut.text.trim()
+      if (exitCode !== 0 || dir === "") { root.snapshotFailed("could not create the screenshot directory"); return }
+      // The mirror can close between the keypress and this reply.
+      if (!capture.item) return
+      capture.item.snapshot(dir + "/green-room-" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss") + ".png")
+    }
+  }
+
+  // The sensor frame becomes the glass's picture in place: flipped when
+  // the mirror is on, center-cropped to 16:9 (the fx picks whichever
+  // side the sensor's aspect leaves too long). Then the same wording and
+  // click action as a screenshot notification, so the "invoke last
+  // notification" keybind edits a snapshot too.
+  onSnapshotSaved: function(path) {
+    var q = Util.shellQuote(path)
+    Util.execDetached('magick ' + q + (root.mirrored ? ' -flop' : '')
+      + " -gravity center -extent '%[fx:w*9>h*16?h*16/9:w]x%[fx:w*9>h*16?h:w*9/16]' " + q + '; '
+      + 'wl-copy --type image/png <' + q + '; '
+      + 'omarchy-notification-send "Snapshot saved to clipboard and file" "Edit with Super + Alt + , (or click this)" '
+      + '--image ' + q + ' --exec "$(printf "%q %q" "${OMARCHY_SCREENSHOT_EDITOR:-tensaku-edit}" ' + q + ')"')
+  }
+
+  function snapshotFailed(message) {
+    console.warn("green-room", "snapshot failed:", message)
+    Util.execDetached('omarchy-notification-send -u critical "Green Room: snapshot failed" ' + Util.shellQuote(message))
+  }
+
   // ---------------------------------------------------------------- sizing
   // 16:9, the framing call participants actually see.
   readonly property int mirrorWidth: Util.clamp(root.setting("previewWidth", 560), 320, 960)
@@ -283,6 +335,7 @@ Panel {
   // window, so the camera is opened once and never contended across the
   // handoff.
   Loader {
+    id: capture
     active: root.showing && root.hasDevices && !root.deviceRestart
     onActiveChanged: {
       if (!active) {
@@ -310,9 +363,17 @@ Panel {
           root.cameraError = String(errorString || "") || "Camera unavailable"
         }
       }
+      function snapshot(path) { imageCapture.captureToFile(path) }
+
       CaptureSession {
         camera: camera
         videoOutput: captureStack.sink
+        imageCapture: ImageCapture {
+          id: imageCapture
+          fileFormat: ImageCapture.PNG
+          onImageSaved: function(requestId, fileName) { root.snapshotSaved(fileName) }
+          onErrorOccurred: function(requestId, error, message) { root.snapshotFailed(message) }
+        }
       }
       Connections {
         target: captureStack.sink.videoSink
@@ -373,6 +434,7 @@ Panel {
         else if (t === "c") root.cycleDevice()
         else if (t === "a") root.persistSetting("micCheck", !root.micCheck)
         else if (t === "p") root.pin()
+        else if (t === "s") root.snapshot()
       }
 
       // Glass content, rendered offscreen and drawn through the rounded
@@ -512,6 +574,13 @@ Panel {
             on: root.micCheck
             hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
             onActivated: root.persistSetting("micCheck", !root.micCheck)
+          }
+
+          ChipButton {
+            visible: root.live
+            glyph: "󰄀"
+            hint: "snapshot (s)"
+            onActivated: root.snapshot()
           }
 
           ChipButton {
@@ -685,6 +754,16 @@ Panel {
     transform: Scale {
       origin.x: video.width / 2
       xScale: root.mirrored ? -1 : 1
+    }
+
+    // Shutter flash on a saved snapshot. A child of the surface, it
+    // inherits the surface's opacity, so only the showing mirror blinks.
+    Rectangle {
+      anchors.fill: parent
+      color: "white"
+      opacity: 0
+      NumberAnimation on opacity { id: shutter; running: false; from: 0.6; to: 0; duration: 350 }
+      Connections { target: root; function onSnapshotSaved(path) { shutter.restart() } }
     }
   }
 
