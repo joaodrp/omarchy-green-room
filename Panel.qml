@@ -554,53 +554,75 @@ Panel {
           GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.6) }
         }
 
-        Row {
+        // One pill for all the controls, a divider between the persisted
+        // toggles and the one-shot actions.
+        Rectangle {
           anchors.horizontalCenter: parent.horizontalCenter
           anchors.bottom: parent.bottom
           anchors.bottomMargin: Style.space(10)
-          spacing: Style.space(8)
+          width: chipRow.width
+          height: chipRow.height
+          radius: Style.cornerRadius
+          color: Qt.rgba(0, 0, 0, 0.5)
 
-          ChipButton {
-            glyph: "󱃧"
-            on: root.mirrored
-            hint: root.mirrored ? "mirrored (m)" : "as others see you (m)"
-            onActivated: root.persistSetting("mirror", !root.mirrored)
-          }
+          Row {
+            id: chipRow
+            spacing: 0
 
-          ChipButton {
-            visible: root.devices.length > 1
-            glyph: "󰄈"
-            hint: (root.selectedDevice ? String(root.selectedDevice.description) : "") + " (c)"
-            onActivated: root.cycleDevice()
-          }
+            ChipButton {
+              glyph: "󱃧"
+              on: root.mirrored
+              hint: root.mirrored ? "mirrored (m)" : "as others see you (m)"
+              onActivated: root.persistSetting("mirror", !root.mirrored)
+            }
 
-          ChipButton {
-            glyph: "󰍬"
-            on: root.micCheck
-            hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
-            onActivated: root.persistSetting("micCheck", !root.micCheck)
-          }
+            ChipButton {
+              visible: root.devices.length > 1
+              glyph: "󰄈"
+              hint: (root.selectedDevice ? String(root.selectedDevice.description) : "") + " (c)"
+              onActivated: root.cycleDevice()
+            }
 
-          ChipButton {
-            visible: root.live
-            glyph: "󰊓"
-            on: root.guides
-            hint: root.guides ? "framing guides on (g)" : "framing guides off (g)"
-            onActivated: root.persistSetting("guides", !root.guides)
-          }
+            ChipButton {
+              glyph: "󰍬"
+              on: root.micCheck
+              hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
+              onActivated: root.persistSetting("micCheck", !root.micCheck)
+            }
 
-          ChipButton {
-            visible: root.live
-            glyph: "󰄀"
-            hint: "snapshot (s)"
-            onActivated: root.snapshot()
-          }
+            ChipButton {
+              visible: root.live
+              glyph: "󰊓"
+              on: root.guides
+              hint: root.guides ? "framing guides on (g)" : "framing guides off (g)"
+              onActivated: root.persistSetting("guides", !root.guides)
+            }
 
-          ChipButton {
-            visible: root.live
-            glyph: "󰐃"
-            hint: "pop out (p)"
-            onActivated: root.pin()
+            Item {
+              visible: root.live
+              width: Style.spacing.hairline + Style.space(8)
+              height: chipRow.height
+              Rectangle {
+                anchors.centerIn: parent
+                width: Style.spacing.hairline
+                height: parent.height - Style.space(16)
+                color: Qt.rgba(1, 1, 1, 0.18)
+              }
+            }
+
+            ChipButton {
+              visible: root.live
+              glyph: "󰄀"
+              hint: "snapshot (s)"
+              onActivated: root.snapshot()
+            }
+
+            ChipButton {
+              visible: root.live
+              glyph: "󰐃"
+              hint: "pop out (p)"
+              onActivated: root.pin()
+            }
           }
         }
 
@@ -756,6 +778,7 @@ Panel {
         anchors.right: parent.right
         anchors.margins: Style.space(8)
         glyph: "󰖲"
+        standalone: true
         opacity: pinHover.hovered ? 1 : 0
         enabled: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -824,7 +847,7 @@ Panel {
     width: meterRow.width + Style.space(16)
     height: Style.space(30)
     radius: Style.cornerRadius
-    color: Qt.rgba(0, 0, 0, 0.45)
+    color: Qt.rgba(0, 0, 0, 0.5)
     opacity: root.micMuted ? 0.45 : 1
 
     // Hovering the meter names the metered mic: it follows the default
@@ -888,28 +911,29 @@ Panel {
   // Icon chip for the hover chrome. The kit buttons derive their state
   // fills from theme alphas tuned for themed panel surfaces; over moving
   // video those fills are too faint to read, so the chips own their
-  // fixed-contrast states.
+  // fixed-contrast states. Flat by default, for sitting in the panel's
+  // pill; `standalone` gives a lone chip the pill's dark fill itself.
   component ChipButton: Rectangle {
     id: chip
 
     property string glyph: ""
     property string hint: ""
     property bool on: false
+    property bool standalone: false
 
     signal activated()
 
     width: Style.space(34)
     height: width
     radius: Style.cornerRadius
-    color: chipArea.containsMouse ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.45)
-    border.width: chip.on ? Style.spacing.hairline : 0
-    border.color: Util.alpha(Color.accent, 0.9)
+    color: chipArea.containsMouse ? Qt.rgba(1, 1, 1, 0.22)
+      : chip.standalone ? Qt.rgba(0, 0, 0, 0.5) : "transparent"
     Behavior on color { ColorAnimation { duration: 120 } }
 
     Text {
       anchors.centerIn: parent
       text: chip.glyph
-      color: "#ffffff"
+      color: chip.on ? Color.accent : "#ffffff"
       font.family: root.fontFamily
       font.pixelSize: Style.font.icon
     }
