@@ -13,7 +13,7 @@ when the panel opens.
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
-| `docs/images/`, `preview.png` | README screenshots; see [Screenshots](#screenshots) |
+| `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
 | `.github/` | CI, and the manifest check it runs |
 
 ## Running it

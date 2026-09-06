@@ -7,7 +7,7 @@ A quick check of how you look and sound, from the Omarchy bar. It works like
 [Hand Mirror](https://handmirror.app/) for macOS. Click the bar icon to see yourself in a
 mirrored live preview, click again and the camera turns off.
 
-<img src="preview.png" alt="The panel open under the bar: live mirrored video with the hover controls along the bottom" width="575">
+<img src="docs/images/preview.png" alt="The panel open under the bar: live mirrored video with the hover controls along the bottom" width="575">
 
 ## Highlights
 
