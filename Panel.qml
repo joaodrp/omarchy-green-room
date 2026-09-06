@@ -31,6 +31,10 @@ Panel {
   readonly property string requestedDeviceId: String(root.setting("device", "auto") || "auto")
   // Mirrored by default: an unmirrored preview is useless for fixing your hair.
   readonly property bool mirrored: root.setting("mirror", true) !== false
+  // Framing guides: rule-of-thirds lines, the top one the eye line — the
+  // one thing a mirror cannot tell you is whether you are centered and
+  // at eye height.
+  readonly property bool guides: root.setting("guides", false) === true
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   readonly property var selectedDevice: {
@@ -433,6 +437,7 @@ Panel {
         if (t === "m") root.persistSetting("mirror", !root.mirrored)
         else if (t === "c") root.cycleDevice()
         else if (t === "a") root.persistSetting("micCheck", !root.micCheck)
+        else if (t === "g") root.persistSetting("guides", !root.guides)
         else if (t === "p") root.pin()
         else if (t === "s") root.snapshot()
       }
@@ -574,6 +579,14 @@ Panel {
             on: root.micCheck
             hint: root.micCheck ? "mic check on (a)" : "mic check off (a)"
             onActivated: root.persistSetting("micCheck", !root.micCheck)
+          }
+
+          ChipButton {
+            visible: root.live
+            glyph: "󰊓"
+            on: root.guides
+            hint: root.guides ? "framing guides on (g)" : "framing guides off (g)"
+            onActivated: root.persistSetting("guides", !root.guides)
           }
 
           ChipButton {
@@ -767,6 +780,22 @@ Panel {
     transform: Scale {
       origin.x: video.width / 2
       xScale: root.mirrored ? -1 : 1
+    }
+
+    // Framing guides, on the surface so they fade with the picture. Two
+    // verticals then two horizontals, at a third and two thirds.
+    Repeater {
+      model: root.guides ? 4 : 0
+      Rectangle {
+        required property int index
+        readonly property bool vertical: index < 2
+        readonly property real at: (index % 2 + 1) / 3
+        x: vertical ? Math.round(video.width * at) : 0
+        y: vertical ? 0 : Math.round(video.height * at)
+        width: vertical ? Style.spacing.hairline : video.width
+        height: vertical ? video.height : Style.spacing.hairline
+        color: Qt.rgba(1, 1, 1, 0.4)
+      }
     }
 
     // Shutter flash on a saved snapshot. A child of the surface, it
