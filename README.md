@@ -3,15 +3,15 @@
 [![CI](https://github.com/joaodrp/omarchy-green-room/actions/workflows/ci.yml/badge.svg)](https://github.com/joaodrp/omarchy-green-room/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A quick check of how you look and sound, from the Omarchy bar. In the spirit of
-[Hand Mirror](https://handmirror.app/) for macOS: click the bar icon, see yourself in a
-mirrored live preview, click again and the camera is off.
+A quick check of how you look and sound, from the Omarchy bar. It works like
+[Hand Mirror](https://handmirror.app/) for macOS. Click the bar icon to see yourself in a
+mirrored live preview, click again and the camera turns off.
 
 <img src="preview.png" alt="The panel open under the bar: live mirrored video with the hover controls along the bottom" width="575">
 
 ## Highlights
 
-- 🪞 One click, live 16:9 video, mirrored like a mirror. `m` shows what others see.
+- 🪞 One click, live 16:9 video, mirrored by default. `m` shows what others see.
 - 🔒 The camera runs only while a mirror is showing. Close it and `/dev/videoN` is free within
   a couple of seconds; nothing streams in the background, ever.
 - 🎙️ Mic check: a level meter that puts speech mid-meter, holds peaks, and turns urgent when
@@ -19,7 +19,7 @@ mirrored live preview, click again and the camera is off.
 - 📐 Framing guides: rule of thirds, with the top line for your eyes.
 - 📌 Pop out: a small always-on-top mirror that follows you across workspaces. Drag to move,
   drag any corner to resize.
-- 📸 Snapshot: what the glass shows, saved and announced like an Omarchy screenshot.
+- 📸 Snapshot: what the preview shows, saved and announced like an Omarchy screenshot.
 - ⌨️ Every control has a key, and the controls stay out of the way until you hover.
 - 🎨 Built from the shell's own components. Follows your theme; no settings page to visit.
 
@@ -31,7 +31,7 @@ omarchy plugin add https://github.com/joaodrp/omarchy-green-room.git --enable
 
 ## What it shows
 
-Left click opens the mirror, click again closes it. The glass is dark until the first frame
+Left click opens the mirror, click again closes it. The preview is dark until the first frame
 arrives, then the video fades in. Hover for the controls:
 
 | Control | Key | Does |
@@ -44,15 +44,15 @@ arrives, then the video fades in. Hover for the controls:
 | Pop out | `p` | Lift the mirror into a corner window |
 | | `esc` | Close |
 
-The mic chip stays reachable when the camera is missing or broken, which is exactly when "at
-least check my mic" matters.
+The mic chip stays reachable even when the camera is missing or broken, so you can still check
+your mic.
 
 ### Flip
 
 <img src="docs/images/flip.png" alt="Two mirrors side by side: mirrored, and as others see you" width="575">
 
 Mirrored by default, because that is how you fix your hair. `m` shows the picture the other
-side of the call gets; a snapshot saves whichever is showing.
+side of the call gets. A snapshot saves whichever is showing.
 
 ### Mic check
 
@@ -71,9 +71,9 @@ silently flat bar.
 
 <img src="docs/images/guides.png" alt="The mirror with rule-of-thirds lines over the picture" width="575">
 
-Eyes on the top line, face in the middle third, and you are framed the way the other side of
-the call expects. The one thing a mirror cannot tell you is whether you are centered and at
-eye height; the lines can.
+Put your eyes on the top line and your face in the middle third, and you are framed the way
+the other side of the call expects. The lines show what a mirror alone cannot: whether you are
+centered and at eye height.
 
 ### Pop out
 
@@ -89,9 +89,9 @@ when the check is on.
 
 <img src="docs/images/snapshot.png" alt="The mirror just after a snapshot, with the saved notification and its thumbnail at the top right" width="575">
 
-`s` saves what the glass shows, mirrored or not, 16:9, at camera resolution, as a PNG in your
+`s` saves what the preview shows, mirrored or not, 16:9, at camera resolution, as a PNG in your
 screenshot directory, copies it to the clipboard, and sends the same notification a screenshot
-does: click it, or press `Super + Alt + ,`, to open the picture in the screenshot editor.
+does. Click it, or press `Super + Alt + ,`, to open the picture in the screenshot editor.
 Press `m` first for the picture others see.
 
 ## Settings
@@ -109,14 +109,14 @@ Set through the bar's widget settings, or inline on the widget's `shell.json` en
 
 ## Privacy
 
-- **The camera is opened when a mirror shows and released when the last one closes.** Not
-  paused, released: on Qt's camera backend a paused camera keeps the device open, so this plugin
-  destroys the capture stack instead. `fuser /dev/video0` shows the shell holding the device
-  while the mirror is up, and nothing within about two seconds of closing it.
+- **The camera is opened when a mirror shows and released when the last one closes.** On Qt's
+  camera backend, pausing a camera keeps the device open, so this plugin destroys the capture
+  stack instead of pausing it. `fuser /dev/video0` shows the shell holding the device while the
+  mirror is up, and nothing within about two seconds of closing it.
 - **The microphone is read only while the mic check is on and a mirror is showing.** The
   meter holds a real capture stream for that time, which is what makes a Bluetooth headset
   switch to its call profile and show the mic a call would use, rather than the one it idles
-  on. Released with the mirror.
+  on. It is released when the mirror closes.
 - **Nothing leaves the machine.** No daemon, no background process, no network. A snapshot is
   a file in your pictures directory and nowhere else.
 
@@ -140,14 +140,6 @@ omarchy-shell io.github.joaodrp.green-room close   # also closes a popped-out mi
 ```
 
 Bind `toggle` to a key for a mirror that needs no mouse at all.
-
-## Why not omarchy-webcam or cam-preview?
-
-[Webcam Controls](https://github.com/kristoferlund/omarchy-webcam) is a camera tuning tool with
-a preview attached. [Camera Preview](https://github.com/mandavkarpranjal/cam-preview) predates
-Qt versions where live video works in the shell and renders a still-capture slideshow. Green
-Room is the pre-meeting check, and only that: one click, live video, mirrored, with a mic
-meter, guides, a corner mirror and a snapshot when you want them.
 
 ## Contributing
 
