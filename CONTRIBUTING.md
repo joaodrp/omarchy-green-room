@@ -116,6 +116,15 @@ current state, never the change — git history holds that.
   were an airplane and an "HD" badge.
 - **The webcam may be gone.** A Studio Display's camera disappears with the display link; the
   panel must show the no-camera glass, not error out.
+- **Reload is a restart.** Never `omarchy-refresh-shell`: that resets the user's bar to defaults.
+- **`qs log` without `-p "$OMARCHY_PATH/shell"` prints nothing useful**, so an empty result is
+  not evidence of a clean load.
+- **`grim` hangs while the display is DPMS-off or the session is locked**; check
+  `hyprctl monitors -j` before blaming the capture, and never kill `grim` mid-capture: it wedges
+  the compositor's screencopy until that clears.
+- **Report what you verified and what you could not.** A clean lint and a loading shell say the
+  file parses, not that video renders or the sensor is released; `fuser /dev/video0` and a look
+  at the panel are the checks.
 
 ## Commits
 
