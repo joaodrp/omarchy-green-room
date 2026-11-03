@@ -59,10 +59,43 @@ omarchy-shell io.github.joaodrp.green-room close
 fuser /dev/video0        # nothing within ~2s
 ```
 
-and look at the panel.
+and look at the panel; [Testing live](#testing-live) does that without a person at the keyboard.
 
 CI runs the manifest check. `omarchy plugin validate` and the linter need Omarchy and Quickshell
 on the machine, so run those two yourself.
+
+## Testing live
+
+Everything a person does at the panel can be scripted, so test changes yourself before asking
+anyone to look.
+
+| To | Run |
+| --- | --- |
+| Load a change | `omarchy-restart-shell` |
+| Open, close | `omarchy-shell io.github.joaodrp.green-room open` / `close` (one bar's panel; on another monitor, click its bar icon) |
+| Press a panel key | `wtype p` (any key from the README table, panel open) |
+| Move the pointer | `hyprctl dispatch movecursor X Y` (logical pixels) |
+| See the screen | `grim -s 0.5 /tmp/screen.png`, then read the image |
+| Find the pinned window | `hyprctl clients -j \| jq '.[] \| select(.title == "Green Room")'` |
+| Read QML logs | `qs log -p "$OMARCHY_PATH/shell" --tail 60` |
+| Check the cameras | `fuser /dev/video*` |
+
+Debug with temporary `console.warn` lines and read them from the log. `grim -g` takes logical
+coordinates: half the pixel position in a `grim -s 0.5` shot on a 2x display.
+
+Video must move on its own. Park the pointer off the panel, then grab the video area twice:
+
+```sh
+grim -g "X,Y WxH" /tmp/a.png; sleep 1; grim -g "X,Y WxH" /tmp/b.png
+magick compare -metric AE -fuzz 0.5% /tmp/a.png /tmp/b.png null:   # frozen: 0
+```
+
+Before blaming the panel, rule out the camera. Set the format explicitly: a device keeps the last
+one any app chose, frame rate included.
+
+```sh
+ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -i /dev/videoN -t 5 -f null -
+```
 
 ## Screenshots
 
