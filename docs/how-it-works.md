@@ -44,6 +44,10 @@ so video would leak into the corners. The preview renders into a layer and is dr
 rounded `maskSource` by `MultiEffect`: real alpha clipping, which also stays correct on themes
 with translucent popup backgrounds.
 
+A new frame inside the layer does not schedule a window redraw, so the panel requests one on
+each `videoFrameChanged` while the glass is showing. The pinned window draws the video directly
+and needs none.
+
 ## The mic check
 
 The meter is driven by Quickshell's `PwNodePeakMonitor` on `Pipewire.defaultAudioSource`, the
