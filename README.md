@@ -12,8 +12,8 @@ mirrored live preview, click again and the camera turns off.
 ## Highlights
 
 - 🪞 One click, live 16:9 video, mirrored by default. `m` shows what others see.
-- 🔒 The camera runs only while a mirror is showing. Close it and `/dev/videoN` is free within
-  a couple of seconds; nothing streams in the background, ever.
+- 🔒 The camera runs only while a mirror is showing. Close it and the camera turns off within a
+  couple of seconds; nothing streams in the background, ever.
 - 🎙️ Mic check: a level meter that puts speech mid-meter, holds peaks, and turns urgent when
   you run hot.
 - 📐 Framing guides: rule of thirds, with the top line for your eyes.
@@ -63,17 +63,15 @@ side of the call gets. A snapshot saves whichever is showing.
 
 With more than one camera connected, the camera chip and `c` move to the next one, and the
 choice sticks. While that camera is not connected the mirror uses the system default, and it
-picks your camera again once it is back. Cameras are remembered by serial number, or by name for
-one without, so a camera that returns as a different `/dev/videoN` is still found.
+picks your camera again once it is back.
 
 ### Mic check
 
 <img src="docs/images/mic-check.png" alt="The mirror with the level meter lit to mid-scale in the bottom-left corner" width="575">
 
-Ten cells across -60..0 dBFS, 6 dB each, so speech lands mid-meter the way it does in other
-mic-check UIs and syllables visibly move it. The top cell starts at -6 dBFS and lights in the
-theme's urgent color. The brightest recently hit cell keeps glowing for a second, so a peak that
-lands between glances still registers.
+Normal speech lands mid-meter and moves with every syllable. The top cell lights in the theme's
+urgent color when you are too loud. The loudest recent cell keeps glowing for a second, so a peak
+you missed still shows.
 
 <img src="docs/images/hover-meter.png" alt="The meter hovered: the speech cells tinted, and the microphone's name and level" width="285">
 
@@ -81,9 +79,9 @@ Hover the meter to see which microphone it reads and at what level. It follows t
 default, so a forgotten headset shows up here. A muted or missing mic shows a slashed glyph
 instead of a silently flat bar.
 
-Hovering also tints the cells where speech belongs, -30..-12 dBFS. Scroll on the meter, or press
-`up` and `down`, to move the microphone 5% at a time until you land there. It is the same level
-as the input slider in Omarchy's audio panel, so a change in one shows in the other.
+Hovering also tints the cells where speech belongs. Scroll on the meter, or press `up` and
+`down`, to move the microphone 5% at a time until your voice lands there. It is the same level as
+the input slider in Omarchy's audio panel, so a change in one shows in the other.
 
 ### Framing guides
 
@@ -118,28 +116,24 @@ Set through the bar's widget settings, or inline on the widget's `shell.json` en
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `device` | `auto` | Camera device id; `auto` follows the system default |
-| `deviceSerial` | `""` | The chosen camera's serial, saved with `device` by `c` |
-| `deviceName` | `""` | The chosen camera's name, saved with `device` by `c` |
+| `device` | `auto` | Camera; `auto` follows the system default |
+| `deviceSerial` | `""` | Saved by `c` to recognize the chosen camera |
+| `deviceName` | `""` | Saved by `c` to recognize the chosen camera |
 | `mirror` | `true` | Mirror the preview horizontally |
 | `micCheck` | `false` | Show the mic level meter |
 | `guides` | `false` | Show the framing guides |
 | `previewWidth` | `560` | Mirror width in px, 320-960, 16:9 |
 | `pinWidth` | `320` | Pinned mirror width in px, 240-960, 16:9; also set by resizing the pin |
 
-The serial and name identify the camera ahead of `device`. When setting `device` by hand, clear
-them, or set it to `auto`.
+To pick a camera by hand, set `device` and clear `deviceSerial` and `deviceName`; `c` is easier.
 
 ## Privacy
 
-- **The camera is opened when a mirror shows and released when the last one closes.** On Qt's
-  camera backend, pausing a camera keeps the device open, so this plugin destroys the capture
-  stack instead of pausing it. `fuser /dev/video0` shows the shell holding the device while the
-  mirror is up, and nothing within about two seconds of closing it.
-- **The microphone is read only while the mic check is on and a mirror is showing.** The
-  meter holds a real capture stream for that time, which is what makes a Bluetooth headset
-  switch to its call profile and show the mic a call would use, rather than the one it idles
-  on. It is released when the mirror closes.
+- **The camera is on only while a mirror shows.** It turns off within about two seconds of the
+  last one closing.
+- **The microphone is read only while the mic check is on and a mirror is showing.** A Bluetooth
+  headset switches to its call mode for that time, so the meter shows the mic a call would use.
+  It is released when the mirror closes.
 - **Nothing leaves the machine.** No daemon, no background process, no network. A snapshot is
   a file in your pictures directory and nowhere else.
 
