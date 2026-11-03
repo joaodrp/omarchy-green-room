@@ -105,11 +105,16 @@ Set through the bar's widget settings, or inline on the widget's `shell.json` en
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `device` | `auto` | Camera device id; `auto` follows the system default |
+| `deviceSerial` | `""` | The chosen camera's serial, saved with `device` by `c` |
+| `deviceName` | `""` | The chosen camera's name, saved with `device` by `c` |
 | `mirror` | `true` | Mirror the preview horizontally |
 | `micCheck` | `false` | Show the mic level meter |
 | `guides` | `false` | Show the framing guides |
 | `previewWidth` | `560` | Mirror width in px, 320-960, 16:9 |
 | `pinWidth` | `320` | Pinned mirror width in px, 240-960, 16:9; also set by resizing the pin |
+
+The serial and name identify the camera ahead of `device`. When setting `device` by hand, clear
+them, or set it to `auto`.
 
 ## Privacy
 

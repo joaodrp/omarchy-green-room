@@ -12,10 +12,11 @@ when the panel opens.
 | --- | --- |
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
+| `devices.mjs` | Which connected camera the saved choice means; plain JavaScript, tested with `node` |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
 | `preview.png` | The README hero, and the listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
-| `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check, and the release automation; see [Releases](#releases) |
+| `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check and tests, and the release automation; see [Releases](#releases) |
 
 ## Running it
 
@@ -38,6 +39,7 @@ qs log -p "$OMARCHY_PATH/shell" --tail 60   # QML errors land here, and only wit
 ```sh
 omarchy plugin validate "$PWD"
 python3 .github/check-manifest.py   # manifest, README table and Panel.qml reads agree
+node --test .github/test-devices.mjs   # camera resolution
 
 # QML lint needs an import dir holding a `qs` symlink to the shell
 mkdir -p /tmp/qslint && ln -sfn "$OMARCHY_PATH/shell" /tmp/qslint/qs
@@ -61,8 +63,8 @@ fuser /dev/video0        # nothing within ~2s
 
 and look at the panel; [Testing live](#testing-live) does that without a person at the keyboard.
 
-CI runs the manifest check. `omarchy plugin validate` and the linter need Omarchy and Quickshell
-on the machine, so run those two yourself.
+CI runs the manifest check and the `node` tests. `omarchy plugin validate` and the linter need
+Omarchy and Quickshell on the machine, so run those two yourself.
 
 ## Testing live
 

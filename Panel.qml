@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
+import "devices.mjs" as Devices
 
 // Green Room: click the bar icon, see yourself. The panel is nothing but
 // the glass — a live 16:9 mirror. Idle it reads as dark glass with a
@@ -27,7 +28,12 @@ Panel {
 
   readonly property var devices: mediaDevices.videoInputs
   readonly property bool hasDevices: devices.length > 0
+  // The chosen camera, saved as all three of id, serial and name: the id
+  // (/dev/videoN) is renumbered by probe order, so it alone can name a
+  // different camera after a reboot or replug. devices.mjs decides.
   readonly property string requestedDeviceId: String(root.setting("device", "auto") || "auto")
+  readonly property string requestedDeviceSerial: String(root.setting("deviceSerial", "") || "")
+  readonly property string requestedDeviceName: String(root.setting("deviceName", "") || "")
   // Mirrored by default: an unmirrored preview is useless for fixing your hair.
   readonly property bool mirrored: root.setting("mirror", true) !== false
   // Framing guides: rule-of-thirds lines, the top one the eye line — the
@@ -36,24 +42,106 @@ Panel {
   readonly property bool guides: root.setting("guides", false) === true
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
-  readonly property var selectedDevice: {
-    if (!root.hasDevices) return null
-    if (root.requestedDeviceId !== "auto") {
-      for (var i = 0; i < root.devices.length; i++) {
-        if (String(root.devices[i].id) === root.requestedDeviceId) return root.devices[i]
+  // Serials come from sysfs, read asynchronously, one FileView per device.
+  // The Instantiator rebuilds them all on any device-list change, so a
+  // reused /dev/videoN is always re-read; a destroyed reader never reports.
+  // `deviceSerials` maps id -> serial for the readers that have finished.
+  property var deviceSerials: ({})
+  Instantiator {
+    model: root.devices
+    delegate: FileView {
+      id: reader
+      required property var modelData
+      readonly property string deviceId: String(modelData.id)
+      path: Devices.serialPath(reader.deviceId)
+      printErrors: false
+      onLoaded: root.serialRead(reader.deviceId, reader.text().trim())
+      onLoadFailed: root.serialRead(reader.deviceId, "")
+      // Reported later, not now: siblings not yet created still hold the
+      // previous round's serials. A closure per call, as callLater merges
+      // calls to one function and keeps only the last arguments.
+      Component.onCompleted: {
+        root.serialStarted(reader.deviceId)
+        if (reader.path === "") {
+          var id = reader.deviceId
+          Qt.callLater(function() { root.serialRead(id, "") })
+        }
       }
     }
-    return mediaDevices.defaultVideoInput
+  }
+  function serialStarted(id) {
+    var next = Object.assign({}, root.deviceSerials)
+    delete next[id]
+    root.deviceSerials = next
+    root.deviceCurrent = false
+    if (!capture.active) root.mountGate = false
+  }
+  function serialRead(id, serial) {
+    var next = Object.assign({}, root.deviceSerials)
+    next[id] = serial
+    root.deviceSerials = next
+    root.resolveDevice()
   }
 
-  function cycleDevice() {
-    if (root.devices.length < 2) return
-    var current = root.selectedDevice ? String(root.selectedDevice.id) : ""
-    var next = 0
+  // The connected devices as { id, serial, name }, or null while a serial
+  // is still being read.
+  function deviceRows() {
+    var rows = []
     for (var i = 0; i < root.devices.length; i++) {
-      if (String(root.devices[i].id) === current) { next = (i + 1) % root.devices.length; break }
+      var id = String(root.devices[i].id)
+      if (!(id in root.deviceSerials)) return null
+      rows.push({ id: id, serial: root.deviceSerials[id], name: String(root.devices[i].description) })
     }
-    root.persistSetting("device", String(root.devices[next].id))
+    return rows
+  }
+
+  // Assigned, not bound: a binding would re-point the camera the moment the
+  // list changes, before the serials that say which camera is which.
+  // `deviceCurrent` is false from a device-list change until its serials
+  // are all read; no capture mounts meanwhile, as the old answer may name
+  // a path another camera now holds, and a Camera with no device opens
+  // the system default.
+  property var selectedDevice: null
+  property string selectedSerial: ""
+  property bool deviceCurrent: false
+  // Whether the capture stack may be up. Set, not bound to deviceCurrent: a
+  // running capture rides out a rescan (an unrelated camera plugged in),
+  // and only a new mount waits for the current answer.
+  property bool mountGate: false
+  function resolveDevice() {
+    var rows = root.deviceRows()
+    if (rows === null) return
+    var i = Devices.resolveDevice(rows, {
+      id: root.requestedDeviceId, serial: root.requestedDeviceSerial, name: root.requestedDeviceName
+    })
+    if (i < 0 && rows.length > 0) {
+      var fallback = String(mediaDevices.defaultVideoInput.id)
+      i = rows.findIndex(function(r) { return r.id === fallback })
+    }
+    root.selectedDevice = i >= 0 ? root.devices[i] : null
+    root.selectedSerial = i >= 0 ? rows[i].serial : ""
+    root.deviceCurrent = true
+    root.mountGate = true
+  }
+  // A device-list change resolves through the readers it recreates; only an
+  // empty list has none to do it.
+  onRequestedDeviceIdChanged: resolveDevice()
+  onRequestedDeviceSerialChanged: resolveDevice()
+  onRequestedDeviceNameChanged: resolveDevice()
+  onDevicesChanged: if (devices.length === 0) resolveDevice()
+  Connections {
+    target: mediaDevices
+    function onDefaultVideoInputChanged() { root.resolveDevice() }
+  }
+
+  // From the camera showing, which after a fallback is not the saved one;
+  // the pick replaces the saved choice and is never `auto`.
+  function cycleDevice() {
+    var rows = root.deviceRows()
+    if (rows === null || rows.length < 2) return
+    var current = root.selectedDevice ? String(root.selectedDevice.id) : ""
+    var next = (rows.findIndex(function(r) { return r.id === current }) + 1) % rows.length
+    root.persistSettings({ device: rows[next].id, deviceSerial: rows[next].serial, deviceName: rows[next].name })
   }
 
   // ------------------------------------------------------------------- mic
@@ -317,24 +405,32 @@ Panel {
   // Keyed on the resolved device, not the setting: hotplug can flip the
   // resolution (auto default changes, chosen camera unplugged) without the
   // setting moving, and retargeting a live Camera is the path that leaves
-  // the old /dev/videoN open. Same-device resolutions do not restart.
-  readonly property string activeDeviceId: root.selectedDevice ? String(root.selectedDevice.id) : ""
+  // the old /dev/videoN open. Same-device resolutions do not restart. The
+  // serial is part of the key: another camera can take over the same id.
+  readonly property string activeDeviceId: root.selectedDevice
+    ? String(root.selectedDevice.id) + "|" + root.selectedSerial : ""
   onActiveDeviceIdChanged: {
     root.deviceRestart = true
     Qt.callLater(function() { root.deviceRestart = false })
   }
 
-  // Merge one key into this widget's inline settings. Local-first so the
-  // glass reacts on the click; the shell.json write settles behind it.
-  function persistSetting(key, value) {
+  // Merge keys into this widget's inline settings in one write, so related
+  // keys never land half-updated. Local-first so the glass reacts on the
+  // click; the shell.json write settles behind it.
+  function persistSettings(values) {
     var entry = { id: root.moduleName }
     for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
-    entry[key] = value
+    for (var key in values) entry[key] = values[key]
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
       root.bar.shell.updateEntryInline(root.moduleName, entry)
     else
-      console.warn("green-room", "shell.updateEntryInline unavailable; setting", key, "will not survive a restart")
+      console.warn("green-room", "shell.updateEntryInline unavailable; settings", Object.keys(values).join(", "), "will not survive a restart")
+  }
+  function persistSetting(key, value) {
+    var values = {}
+    values[key] = value
+    root.persistSettings(values)
   }
 
   // --------------------------------------------------------------- capture
@@ -344,11 +440,13 @@ Panel {
   // handoff.
   Loader {
     id: capture
-    active: root.showing && root.hasDevices && !root.deviceRestart
+    active: root.showing && root.hasDevices && root.selectedDevice !== null && !root.deviceRestart
+      && root.mountGate
     onActiveChanged: {
       if (!active) {
         root.live = false
         root.cameraError = ""
+        if (!root.deviceCurrent) root.mountGate = false
       }
     }
     sourceComponent: Item {
@@ -362,8 +460,8 @@ Panel {
       Camera {
         id: camera
         active: true
-        // undefined (not null) keeps the property unset until a
-        // device resolves, at which point the binding re-evaluates.
+        // The Loader mounts only with a device resolved; undefined (not
+        // null) covers the teardown, when the device can go first.
         cameraDevice: root.selectedDevice !== null ? root.selectedDevice : undefined
         onErrorOccurred: function(error, errorString) {
           if (error === Camera.NoError) return

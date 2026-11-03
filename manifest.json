@@ -20,6 +20,8 @@
     "defaultSection": "right",
     "defaults": {
       "device": "auto",
+      "deviceSerial": "",
+      "deviceName": "",
       "mirror": true,
       "micCheck": false,
       "guides": false,
@@ -32,6 +34,18 @@
         "type": "string",
         "label": "Camera device id (auto = system default)",
         "defaultValue": "auto"
+      },
+      {
+        "key": "deviceSerial",
+        "type": "string",
+        "label": "Chosen camera's serial (set with the camera by the c key)",
+        "defaultValue": ""
+      },
+      {
+        "key": "deviceName",
+        "type": "string",
+        "label": "Chosen camera's name (set with the camera by the c key)",
+        "defaultValue": ""
       },
       {
         "key": "mirror",

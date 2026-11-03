@@ -29,6 +29,31 @@ The same fact is why the stack is remounted (a brief `deviceRestart` flip) whene
 *resolved* camera changes, rather than ever retargeting `cameraDevice` on a live `Camera`.
 "Resolved" covers a chosen device, an `auto` default that moves, and a fallback after unplug.
 
+## How the chosen camera is found
+
+Qt's camera id is the `/dev/videoN` path, and the kernel numbers those in probe order, so a
+saved path can name another camera after a reboot or replug. The choice is saved as path,
+serial and name, and `devices.mjs` resolves it:
+
+| Saved | Resolves to |
+| --- | --- |
+| `auto` | The system default |
+| A serial | The input with that serial; among several (one camera can expose an IR input beside the RGB one), the one with the saved name. If none is connected, the default: no name match against a twin of the same model |
+| A name, no serial | The camera with that name; with two of one name, the one at the saved path, else the first |
+| A path only | The camera at that path |
+
+The serial is the USB device's, read from `/sys/class/video4linux/videoN/device/../serial`
+with a `FileView` per device. Reads are asynchronous, so the camera is chosen imperatively once
+every connected device has reported, not by binding: a binding would re-point the `Camera`
+when the list changes, before its serials say which camera is which. A device-list change
+rebuilds the readers, so a path reused by another camera is always read again. Until every
+serial is in, no new capture mounts: the previous answer may name a path another camera now
+holds, and a `Camera` with no device opens the system default. A capture already running rides
+out the rescan, and the remount key is path plus serial.
+
+`devices.mjs` is plain JavaScript, imported by the panel and tested with
+`node --test .github/test-devices.mjs`.
+
 ## Why live video, not a still-capture slideshow
 
 Older camera plugins for Omarchy render a slideshow of JPEG still captures, because a
