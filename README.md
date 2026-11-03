@@ -56,6 +56,15 @@ camera is missing or broken, so you can still check your mic.
 Mirrored by default, because that is how you fix your hair. `m` shows the picture the other
 side of the call gets. A snapshot saves whichever is showing.
 
+### Next camera
+
+<img src="docs/images/camera-chip.png" alt="The pointer on the camera chip, with the camera's name above the controls" width="575">
+
+With more than one camera connected, the camera chip and `c` move to the next one, and the
+choice sticks. While that camera is not connected the mirror uses the system default, and it
+picks your camera again once it is back. Cameras are remembered by serial number, or by name for
+one without, so a camera that returns as a different `/dev/videoN` is still found.
+
 ### Mic check
 
 <img src="docs/images/mic-check.png" alt="The mirror with the level meter lit to mid-scale in the bottom-left corner" width="575">
@@ -105,11 +114,16 @@ Set through the bar's widget settings, or inline on the widget's `shell.json` en
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `device` | `auto` | Camera device id; `auto` follows the system default |
+| `deviceSerial` | `""` | The chosen camera's serial, saved with `device` by `c` |
+| `deviceName` | `""` | The chosen camera's name, saved with `device` by `c` |
 | `mirror` | `true` | Mirror the preview horizontally |
 | `micCheck` | `false` | Show the mic level meter |
 | `guides` | `false` | Show the framing guides |
 | `previewWidth` | `560` | Mirror width in px, 320-960, 16:9 |
 | `pinWidth` | `320` | Pinned mirror width in px, 240-960, 16:9; also set by resizing the pin |
+
+The serial and name identify the camera ahead of `device`. When setting `device` by hand, clear
+them, or set it to `auto`.
 
 ## Privacy
 

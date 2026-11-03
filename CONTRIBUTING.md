@@ -12,10 +12,11 @@ when the panel opens.
 | --- | --- |
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
+| `devices.mjs` | Which connected camera the saved choice means; plain JavaScript, tested with `node` |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
 | `preview.png` | The README hero, and the listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
-| `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check, and the release automation; see [Releases](#releases) |
+| `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check and tests, and the release automation; see [Releases](#releases) |
 
 ## Running it
 
@@ -38,6 +39,7 @@ qs log -p "$OMARCHY_PATH/shell" --tail 60   # QML errors land here, and only wit
 ```sh
 omarchy plugin validate "$PWD"
 python3 .github/check-manifest.py   # manifest, README table and Panel.qml reads agree
+node --test .github/test-devices.mjs   # camera resolution
 
 # QML lint needs an import dir holding a `qs` symlink to the shell
 mkdir -p /tmp/qslint && ln -sfn "$OMARCHY_PATH/shell" /tmp/qslint/qs
@@ -61,8 +63,8 @@ fuser /dev/video0        # nothing within ~2s
 
 and look at the panel; [Testing live](#testing-live) does that without a person at the keyboard.
 
-CI runs the manifest check. `omarchy plugin validate` and the linter need Omarchy and Quickshell
-on the machine, so run those two yourself.
+CI runs the manifest check and the `node` tests. `omarchy plugin validate` and the linter need
+Omarchy and Quickshell on the machine, so run those two yourself.
 
 ## Testing live
 
@@ -74,7 +76,7 @@ anyone to look.
 | Load a change | `omarchy-restart-shell` |
 | Open, close | `omarchy-shell io.github.joaodrp.green-room open` / `close` (one bar's panel; on another monitor, click its bar icon) |
 | Press a panel key | `wtype p` (any key from the README table, panel open) |
-| Move the pointer | `hyprctl dispatch movecursor X Y` (logical pixels) |
+| Move the pointer | `hyprctl dispatch 'hl.dsp.cursor.move({ x = X, y = Y })'` (logical pixels) |
 | See the screen | `grim -s 0.5 /tmp/screen.png`, then read the image |
 | Find the pinned window | `hyprctl clients -j \| jq '.[] \| select(.title == "Green Room")'` |
 | Read QML logs | `qs log -p "$OMARCHY_PATH/shell" --tail 60` |
@@ -83,11 +85,12 @@ anyone to look.
 Debug with temporary `console.warn` lines and read them from the log. `grim -g` takes logical
 coordinates: half the pixel position in a `grim -s 0.5` shot on a 2x display.
 
-Video must move on its own. Park the pointer off the panel, then grab the video area twice:
+Video must move on its own. Park the pointer off the panel, then grab the video area twice and
+compare exactly: a denoising camera barely changes a still scene.
 
 ```sh
 grim -g "X,Y WxH" /tmp/a.png; sleep 1; grim -g "X,Y WxH" /tmp/b.png
-magick compare -metric AE -fuzz 0.5% /tmp/a.png /tmp/b.png null:   # frozen: 0
+magick compare -metric AE /tmp/a.png /tmp/b.png null:   # frozen: 0
 ```
 
 Before blaming the panel, rule out the camera. Set the format explicitly: a device keeps the last
@@ -102,7 +105,9 @@ ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -i /dev/videoN -t 5 -f n
 The README pictures show a generated person, not a contributor's room. To reshoot them, feed
 the panel a clip instead of the webcam: make a looping video from the image, then, in a local
 patch you do not commit, replace the `Camera` inside the capture stack with a `MediaPlayer`
-that targets the same sink:
+that targets the same sink, and drop `camera: camera` from the `CaptureSession`. The image
+must carry no chrome, since the controls are translucent, and is flipped (`magick -flop`) to
+look right in the mirrored preview:
 
 ```sh
 ffmpeg -loop 1 -i face.png -t 5 -pix_fmt yuv420p -r 30 fake.mp4
@@ -115,9 +120,11 @@ MediaPlayer { source: "file:///path/to/fake.mp4"; videoOutput: captureStack.sink
 
 The `live` flag, the chrome, the meter, the guides and the pin all behave as with a camera,
 since every one of them hangs off the sink; only the snapshot does not, as `ImageCapture` needs
-a real `Camera`. Capture with `grim`, then crop; the display is scale 2, so captured pixels are
-twice the logical size. A cursor warp (`hl.dsp.cursor.move`) generates no motion event, so
-follow it with a `wlrctl pointer move 2 2` to make the hover chrome appear.
+a real `Camera`. Shoot on an empty workspace, and patch any caption that would show a real
+device name. Capture with `grim`, then crop to match the existing pictures: 1150x740 for the
+default width at scale 2, where captured pixels are twice the logical size. A cursor warp
+(`hl.dsp.cursor.move`) generates no motion event, so follow it with a `wlrctl pointer move 2 2`
+to make the hover chrome appear.
 
 ## Conventions
 
