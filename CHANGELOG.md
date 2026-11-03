@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/joaodrp/omarchy-green-room/compare/v0.1.2...v0.2.0) (2026-11-03)
+
+
+### Features
+
+* set the mic level from the meter ([#9](https://github.com/joaodrp/omarchy-green-room/issues/9)) ([6302057](https://github.com/joaodrp/omarchy-green-room/commit/6302057968cb2af3aaf37019a44a8deadb843f59))
+
 ## [0.1.2](https://github.com/joaodrp/omarchy-green-room/compare/v0.1.1...v0.1.2) (2026-11-03)
 
 
