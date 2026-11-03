@@ -150,6 +150,8 @@ current state, never the change — git history holds that.
 - **The webcam may be gone.** A Studio Display's camera disappears with the display link; the
   panel must show the no-camera glass, not error out.
 - **Reload is a restart.** Never `omarchy-refresh-shell`: that resets the user's bar to defaults.
+  Hot reload can keep the cached `Panel.qml` despite logging `reloading`; restart before
+  testing a change.
 - **`qs log` without `-p "$OMARCHY_PATH/shell"` prints nothing useful**, so an empty result is
   not evidence of a clean load.
 - **`grim` hangs while the display is DPMS-off or the session is locked**; check
