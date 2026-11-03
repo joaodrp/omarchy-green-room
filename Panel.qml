@@ -491,6 +491,16 @@ Panel {
           id: panelVideo
           showing: !root.pinned
         }
+
+        // A frame inside the layer does not schedule a window redraw; ask
+        // for one per frame while the glass is the active surface.
+        Connections {
+          target: panelVideo.videoSink
+          enabled: panel.visible && !root.pinned
+          function onVideoFrameChanged() {
+            if (glass.Window.window) glass.Window.window.update()
+          }
+        }
       }
 
       // Rounded-corner mask: real alpha clipping, so corners stay clean
