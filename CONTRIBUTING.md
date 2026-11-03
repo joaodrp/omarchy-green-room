@@ -85,11 +85,12 @@ anyone to look.
 Debug with temporary `console.warn` lines and read them from the log. `grim -g` takes logical
 coordinates: half the pixel position in a `grim -s 0.5` shot on a 2x display.
 
-Video must move on its own. Park the pointer off the panel, then grab the video area twice:
+Video must move on its own. Park the pointer off the panel, then grab the video area twice and
+compare exactly: a denoising camera barely changes a still scene.
 
 ```sh
 grim -g "X,Y WxH" /tmp/a.png; sleep 1; grim -g "X,Y WxH" /tmp/b.png
-magick compare -metric AE -fuzz 0.5% /tmp/a.png /tmp/b.png null:   # frozen: 0
+magick compare -metric AE /tmp/a.png /tmp/b.png null:   # frozen: 0
 ```
 
 Before blaming the panel, rule out the camera. Set the format explicitly: a device keeps the last
