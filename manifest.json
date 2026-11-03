@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.joaodrp.green-room",
   "name": "Green Room",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "João Pereira",
   "license": "MIT",
   "description": "One-click mirrored webcam and mic check from the Omarchy bar.",
