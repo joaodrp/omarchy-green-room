@@ -13,6 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # The tag and the manifest have to agree, or the marketplace lists a
+      # version the release does not match. Checked here because a tag this
+      # workflow creates triggers no other workflow.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.release.outputs.release_created
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+
+      - name: Tag matches manifest version
+        if: steps.release.outputs.release_created
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          tag="${TAG#v}"
+          manifest=$(python3 -c "import json;print(json.load(open('manifest.json'))['version'])")
+          echo "tag=$tag manifest=$manifest"
+          test "$tag" = "$manifest"

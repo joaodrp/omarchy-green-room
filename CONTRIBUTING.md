@@ -181,8 +181,8 @@ what the change does and why, in the body, with backticks around identifiers.
 
 [release-please](https://github.com/googleapis/release-please) reads the Conventional Commits on
 `main` and keeps a release pull request open with the next version and the changelog. Merging
-it bumps `version` in `manifest.json` (and `version.txt`), tags `vX.Y.Z` and publishes the
-GitHub release; CI checks that the tag and the manifest agree. `feat` bumps the minor version,
+it bumps `version` in `manifest.json`, tags `vX.Y.Z` and publishes the GitHub release, then
+checks that the tag and the manifest agree. `feat` bumps the minor version,
 `fix` the patch, a `!` or `BREAKING CHANGE` footer the major. The release pull request is
 opened with the workflow token, so CI does not run on it; the merge commit is checked as usual.
 
