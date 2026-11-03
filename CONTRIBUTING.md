@@ -76,7 +76,7 @@ anyone to look.
 | Load a change | `omarchy-restart-shell` |
 | Open, close | `omarchy-shell io.github.joaodrp.green-room open` / `close` (one bar's panel; on another monitor, click its bar icon) |
 | Press a panel key | `wtype p` (any key from the README table, panel open) |
-| Move the pointer | `hyprctl dispatch movecursor X Y` (logical pixels) |
+| Move the pointer | `hyprctl dispatch 'hl.dsp.cursor.move({ x = X, y = Y })'` (logical pixels) |
 | See the screen | `grim -s 0.5 /tmp/screen.png`, then read the image |
 | Find the pinned window | `hyprctl clients -j \| jq '.[] \| select(.title == "Green Room")'` |
 | Read QML logs | `qs log -p "$OMARCHY_PATH/shell" --tail 60` |
@@ -105,7 +105,9 @@ ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -i /dev/videoN -t 5 -f n
 The README pictures show a generated person, not a contributor's room. To reshoot them, feed
 the panel a clip instead of the webcam: make a looping video from the image, then, in a local
 patch you do not commit, replace the `Camera` inside the capture stack with a `MediaPlayer`
-that targets the same sink:
+that targets the same sink, and drop `camera: camera` from the `CaptureSession`. The image
+must carry no chrome, since the controls are translucent, and is flipped (`magick -flop`) to
+look right in the mirrored preview:
 
 ```sh
 ffmpeg -loop 1 -i face.png -t 5 -pix_fmt yuv420p -r 30 fake.mp4
@@ -118,9 +120,11 @@ MediaPlayer { source: "file:///path/to/fake.mp4"; videoOutput: captureStack.sink
 
 The `live` flag, the chrome, the meter, the guides and the pin all behave as with a camera,
 since every one of them hangs off the sink; only the snapshot does not, as `ImageCapture` needs
-a real `Camera`. Capture with `grim`, then crop; the display is scale 2, so captured pixels are
-twice the logical size. A cursor warp (`hl.dsp.cursor.move`) generates no motion event, so
-follow it with a `wlrctl pointer move 2 2` to make the hover chrome appear.
+a real `Camera`. Shoot on an empty workspace, and patch any caption that would show a real
+device name. Capture with `grim`, then crop to match the existing pictures: 1150x740 for the
+default width at scale 2, where captured pixels are twice the logical size. A cursor warp
+(`hl.dsp.cursor.move`) generates no motion event, so follow it with a `wlrctl pointer move 2 2`
+to make the hover chrome appear.
 
 ## Conventions
 
