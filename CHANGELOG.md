@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/joaodrp/omarchy-green-room/compare/v0.1.1...v0.1.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* remember the chosen camera by serial and name ([#6](https://github.com/joaodrp/omarchy-green-room/issues/6)) ([c190b22](https://github.com/joaodrp/omarchy-green-room/commit/c190b2293d30fd47317132ee6d76763dc0de5ca7))
+
 ## [0.1.1](https://github.com/joaodrp/omarchy-green-room/compare/v0.1.0...v0.1.1) (2026-11-03)
 
 
