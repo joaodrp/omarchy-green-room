@@ -39,12 +39,13 @@ arrives, then the video fades in. Hover for the controls:
 | Flip | `m` | Mirrored, or as others see you |
 | Next camera | `c` | Only with more than one camera; the choice sticks |
 | Mic check | `a` | Show or hide the level meter |
+| Mic level | `up` `down` | Raise or lower the microphone 5%, with the mic check on |
 | Framing guides | `g` | Show or hide the rule-of-thirds lines |
 | Snapshot | `s` | Save the current picture |
 | Pop out | `p` | Lift the mirror into a corner window |
 | | `esc` | Close |
 
-<img src="docs/images/hover-chip.png" alt="The pointer on the flip chip, with its caption above the controls" width="575">
+<img src="docs/images/hover-chip.png" alt="The flip chip hovered, with its caption above the controls" width="285">
 
 Hovering a chip shows what it does and its key. The mic chip stays reachable even when the
 camera is missing or broken, so you can still check your mic.
@@ -58,7 +59,7 @@ side of the call gets. A snapshot saves whichever is showing.
 
 ### Next camera
 
-<img src="docs/images/camera-chip.png" alt="The pointer on the camera chip, with the camera's name above the controls" width="575">
+<img src="docs/images/camera-chip.png" alt="The camera chip hovered, with the camera's name above the controls" width="285">
 
 With more than one camera connected, the camera chip and `c` move to the next one, and the
 choice sticks. While that camera is not connected the mirror uses the system default, and it
@@ -74,11 +75,15 @@ mic-check UIs and syllables visibly move it. The top cell starts at -6 dBFS and 
 theme's urgent color. The brightest recently hit cell keeps glowing for a second, so a peak that
 lands between glances still registers.
 
-<img src="docs/images/hover-meter.png" alt="The pointer on the meter, which now also names the microphone it reads" width="575">
+<img src="docs/images/hover-meter.png" alt="The meter hovered: the speech cells tinted, and the microphone's name and level" width="285">
 
-Hover the meter to see which microphone it reads. It follows the system default, so a
-forgotten headset shows up here. A muted or missing mic shows a slashed glyph instead of a
-silently flat bar.
+Hover the meter to see which microphone it reads and at what level. It follows the system
+default, so a forgotten headset shows up here. A muted or missing mic shows a slashed glyph
+instead of a silently flat bar.
+
+Hovering also tints the cells where speech belongs, -30..-12 dBFS. Scroll on the meter, or press
+`up` and `down`, to move the microphone 5% at a time until you land there. It is the same level
+as the input slider in Omarchy's audio panel, so a change in one shows in the other.
 
 ### Framing guides
 

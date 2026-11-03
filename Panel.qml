@@ -232,6 +232,23 @@ Panel {
     onTriggered: root.meterHeldCell = root.meterLitCells - 1
   }
 
+  // Where speech should peak: -30..-12 dBFS, healthy speech (~-20) in the
+  // middle. On the 0..1 scale (1 + dBFS / 60) that is 0.5..0.8, cells 5-7;
+  // the hovered meter tints them, so setting the level is "talk and
+  // adjust until the peaks land there".
+  readonly property int meterSpeechFirstCell: Math.floor(0.5 / meterCellSpan + 1e-9)
+  readonly property int meterSpeechLastCell: Math.ceil(0.8 / meterCellSpan - 1e-9) - 1
+
+  // Input level: the default source's own volume, the value the Omarchy
+  // sound panel's input slider and the bar's mic icon move, so all three
+  // stay in step. 5% steps like the mic icon's scroll, clamped to 0..100%.
+  readonly property real micVolume: micSource && micSource.audio ? micSource.audio.volume : 0
+  function stepMicVolume(steps) {
+    if (!root.micSource || !root.micSource.audio) return
+    var next = Math.round((root.micVolume + steps * 0.05) * 20) / 20
+    root.micSource.audio.volume = Util.clamp(next, 0, 1)
+  }
+
   // ------------------------------------------------------------------- pin
   // Pin: the mirror lifts out of the popup into a small always-on-top
   // 16:9 window in the bottom-right corner — the panel's glass gone
@@ -535,6 +552,8 @@ Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
+      // Up/down set the input level while the meter shows.
+      onMoveRequested: function(dx, dy) { if (dy !== 0 && root.micCheck) root.stepMicVolume(-dy) }
       onTextKey: function(t) {
         if (t === "m") root.persistSetting("mirror", !root.mirrored)
         else if (t === "c") root.cycleDevice()
@@ -816,6 +835,8 @@ Panel {
       anchors.fill: parent
       focus: true
       Keys.onEscapePressed: root.pinned = false
+      Keys.onUpPressed: if (root.micCheck) root.stepMicVolume(1)
+      Keys.onDownPressed: if (root.micCheck) root.stepMicVolume(-1)
 
       MirrorVideo {
         id: pinVideo
@@ -952,6 +973,24 @@ Panel {
     HoverHandler { id: meterHover }
     readonly property alias hovered: meterHover.hovered
 
+    // Scroll sets the input level. Wheel deltas add up to whole notches
+    // (120 units), so a touchpad's stream of small deltas steps the level
+    // at a wheel's pace, not one step per event; a turn the other way
+    // starts afresh rather than first paying off the leftover.
+    property real wheelRemainder: 0
+    WheelHandler {
+      acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+      onWheel: function(event) {
+        var plate = parent
+        if (event.angleDelta.y * plate.wheelRemainder < 0) plate.wheelRemainder = 0
+        plate.wheelRemainder += event.angleDelta.y
+        var notches = Math.trunc(plate.wheelRemainder / 120)
+        if (notches === 0) return
+        root.stepMicVolume(notches)
+        plate.wheelRemainder -= notches * 120
+      }
+    }
+
     Row {
       id: meterRow
       anchors.centerIn: parent
@@ -977,6 +1016,10 @@ Panel {
             readonly property bool lit: index < root.meterLitCells
             readonly property color onColor: index === root.meterCells - 1
               ? Color.urgent : Color.accent
+            // The speech target, shown while hovered, when the level is
+            // being set.
+            readonly property bool target: meterHover.hovered
+              && index >= root.meterSpeechFirstCell && index <= root.meterSpeechLastCell
 
             width: Style.space(8)
             height: Style.space(7)
@@ -987,6 +1030,7 @@ Panel {
             // the whole layer repainting.
             color: lit ? onColor
               : index === root.meterHeldCell ? Util.alpha(onColor, 0.45)
+              : target ? Util.alpha(Color.accent, 0.32)
               : Qt.rgba(1, 1, 1, 0.12)
           }
         }
@@ -997,6 +1041,7 @@ Panel {
         visible: meterHover.hovered
         text: root.micSource
           ? String(root.micSource.nickname || root.micSource.description || root.micSource.name)
+            + (root.micSource.audio ? " at " + Math.round(root.micVolume * 100) + "%" : "")
           : "no mic"
         // Plain text: the name is whatever the device advertises.
         textFormat: Text.PlainText

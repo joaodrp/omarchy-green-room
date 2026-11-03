@@ -86,12 +86,22 @@ same primitive behind the shell audio panel's input meter.
 | Why dBFS | Speech lands mid-meter, as in other mic-check UIs, and syllable-scale dynamics (~6-8 dB) visibly move it. A linear scale would show healthy speech (~-20 dBFS, 0.1 linear) as one dim cell |
 | Top cell | Starts at -6 dBFS, the conventional caution zone, in the theme's urgent color |
 | Peak hold | The brightest recently hit cell keeps glowing for a second, so a peak that lands between glances still registers |
+| Speech target | -30..-12 dBFS, cells 6-8, tinted on hover: loud enough to sit well above room noise, with headroom below the caution cell |
 
 One catch, established by measurement rather than documentation: `PwNodePeakMonitor.peak` is
 not linear amplitude but its cube root (the PulseAudio perceptual volume curve). A -36 dBFS
 room reads as `peak` 0.2505 = 0.01572^(1/3), verified against a simultaneous `pw-record`
 capture. So true dBFS is `60*log10(peak)`, and the -60..0 display range maps to 0..1 as
 `1 + log10(peak)`.
+
+### The level
+
+Scroll and `up`/`down` write `Pipewire.defaultAudioSource.audio.volume` in 5% steps, the value
+the shell audio panel's input slider and the bar's mic icon read. There is no plugin copy of
+the level: the source's own volume is the state, so the three never disagree.
+
+A wheel notch is 120 units of `angleDelta`. Touchpads send smaller deltas, so the meter sums
+them and steps once per notch's worth, starting over when the direction flips.
 
 ### Holding the microphone
 

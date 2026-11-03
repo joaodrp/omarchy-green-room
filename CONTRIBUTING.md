@@ -75,7 +75,9 @@ anyone to look.
 | --- | --- |
 | Load a change | `omarchy-restart-shell` |
 | Open, close | `omarchy-shell io.github.joaodrp.green-room open` / `close` (one bar's panel; on another monitor, click its bar icon) |
-| Press a panel key | `wtype p` (any key from the README table, panel open) |
+| Press a panel key | `wtype p`, `wtype -k Up` (any key from the README table). Keys go to the focused surface: toggle `g` and watch it change first |
+| Scroll | `wlrctl pointer scroll 15 0` (one notch down; negative scrolls up) |
+| Read the mic level | `wpctl get-volume @DEFAULT_AUDIO_SOURCE@` |
 | Move the pointer | `hyprctl dispatch 'hl.dsp.cursor.move({ x = X, y = Y })'` (logical pixels) |
 | See the screen | `grim -s 0.5 /tmp/screen.png`, then read the image |
 | Find the pinned window | `hyprctl clients -j \| jq '.[] \| select(.title == "Green Room")'` |
@@ -122,7 +124,9 @@ The `live` flag, the chrome, the meter, the guides and the pin all behave as wit
 since every one of them hangs off the sink; only the snapshot does not, as `ImageCapture` needs
 a real `Camera`. Shoot on an empty workspace, and patch any caption that would show a real
 device name. Capture with `grim`, then crop to match the existing pictures: 1150x740 for the
-default width at scale 2, where captured pixels are twice the logical size. A cursor warp
+default width at scale 2, where captured pixels are twice the logical size. A picture about one
+control is cut from that frame, 570 px wide with about 20 px of video around the control, and
+shown at `width="285"`, the same scale as the full frames. A cursor warp
 (`hl.dsp.cursor.move`) generates no motion event, so follow it with a `wlrctl pointer move 2 2`
 to make the hover chrome appear.
 
