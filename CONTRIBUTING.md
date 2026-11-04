@@ -15,7 +15,8 @@ when the panel opens.
 | `devices.mjs` | Which connected camera the saved choice means; plain JavaScript, tested with `node` |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
-| `preview.png` | The README hero, and the listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
+| `preview.png` | The listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
+| `docs/card/` | The source of `preview.png` and the frames it shows; see [Listing image](#listing-image) |
 | `.github/`, `release-please-config.json`, `.release-please-manifest.json` | CI with its manifest check and tests, and the release automation; see [Releases](#releases) |
 
 ## Running it
@@ -129,6 +130,27 @@ control is cut from that frame, 570 px wide with about 20 px of video around the
 shown at `width="285"`, the same scale as the full frames. A cursor warp
 (`hl.dsp.cursor.move`) generates no motion event, so follow it with a `wlrctl pointer move 2 2`
 to make the hover chrome appear.
+
+### Listing image
+
+`preview.png` is `docs/card/preview.html` rendered at 1920x1080. The marketplace crops it to about
+2:1 and shows it 505 px wide with the plugin name underneath, so the page keeps everything that
+matters out of the top and bottom 60 px. It is set in iA Writer Quattro S and JetBrainsMono Nerd
+Font, both installed by Omarchy.
+
+| File | Shot, with the same clip and patch as above | Cut |
+| --- | --- | --- |
+| `panel.png` | Hover chrome, every chip showing (the camera chip needs a second camera, or `visible: true`), meter at 7 cells | The 16:9 video area, 1120x630 |
+| `meter.png` | Pointer on the meter, 6 cells, caption patched to `USB Microphone at 70%` | `520x110+0+520` of the video area |
+| `chips.png` | Pointer on the camera chip, hint patched to `Studio Display Camera (c)` | `470x150+325+480` of the video area |
+
+Pin the meter by replacing the `meterLitCells` binding with a constant. The outlines in the page
+sit on `panel.png`'s meter and chip row, so check them after a new frame.
+
+```sh
+chromium --headless --hide-scrollbars --window-size=1920,1080 --screenshot=preview.png docs/card/preview.html
+optipng -o2 preview.png
+```
 
 ## Conventions
 

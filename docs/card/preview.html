@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- Source of ../../preview.png, the plugin marketplace listing image. See CONTRIBUTING.md. -->
+<html><head><meta charset="utf-8"><style>
+* { margin: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; }
+body {
+  position: relative;
+  background: radial-gradient(1200px 800px at 75% 35%, #222639 0%, #13141c 70%);
+  color: #c0caf5;
+  font-family: "iA Writer Quattro S", sans-serif;
+}
+h1 { position: absolute; left: 100px; top: 120px; width: 580px; font-size: 70px; line-height: 1.08; font-weight: 700; letter-spacing: -1px; }
+p { position: absolute; left: 100px; top: 300px; width: 540px; font-size: 27px; line-height: 1.45; color: #a9b1d6; }
+ul { position: absolute; left: 100px; top: 420px; list-style: none; padding: 0; font-size: 26px; color: #a9b1d6; }
+li { height: 48px; display: flex; align-items: center; gap: 22px; }
+kbd {
+  min-width: 78px; padding: 4px 10px; border-radius: 8px; text-align: center;
+  font-family: "JetBrainsMono NF", monospace; font-size: 22px; color: #c0caf5;
+  background: #24283b; border: 1px solid #414868; border-bottom-width: 3px;
+}
+img { position: absolute; display: block; }
+.panel { left: 720px; top: 80px; width: 1120px; height: 630px; border-radius: 14px;
+         box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(192,202,245,.10); }
+.zoom { border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.6), 0 0 0 2px #7aa2f7; }
+svg { position: absolute; inset: 0; }
+</style></head><body>
+<h1>Check yourself before you join.</h1>
+<p>A mirror on the Omarchy bar, and a meter that shows how you sound.</p>
+<ul>
+  <li><kbd>m</kbd>Flip the mirror</li>
+  <li><kbd>c</kbd>Next camera</li>
+  <li><kbd>a</kbd>Mic check</li>
+  <li><kbd>↑ ↓</kbd>Mic level</li>
+  <li><kbd>g</kbd>Framing guides</li>
+  <li><kbd>s</kbd>Snapshot</li>
+  <li><kbd>p</kbd>Pop out</li>
+</ul>
+<img class="panel" src="panel.png" alt="">
+<!-- Outlines sit on panel.png's meter and chip row: move them with the frame. -->
+<svg width="1920" height="1080">
+  <g stroke="#7aa2f7" stroke-width="2" fill="none">
+    <rect x="738" y="632" width="238" height="62" rx="8"/>
+    <path d="M857 694 V 780 H 450 V 850"/>
+    <rect x="1080" y="596" width="400" height="100" rx="8"/>
+    <line x1="1280" y1="696" x2="1340" y2="790"/>
+  </g>
+</svg>
+<img class="zoom" src="meter.png" alt="" style="left:100px; top:850px; width:676px; height:143px">
+<img class="zoom" src="chips.png" alt="" style="left:1135px; top:790px; width:705px; height:225px">
+</body></html>
