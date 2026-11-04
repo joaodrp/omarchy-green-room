@@ -18,7 +18,13 @@ plugin=$(readlink -f "${GR_PLUGIN:-$repo}")
 # Matched on the whole command line: a pattern match would also hit the
 # shell running this script.
 running() { pgrep -x -f "qs -p $run" >/dev/null; }
-stop() { pkill -x -f "qs -p $run" || true; while running; do sleep 0.2; done; }
+# `qs kill` lets the panel tear down; a plain SIGTERM leaves its children,
+# such as the mic check's pw-record, running and holding the microphone.
+stop() {
+  running || return 0
+  qs kill -p "$run" >/dev/null 2>&1 || pkill -x -f "qs -p $run" || true
+  while running; do sleep 0.2; done
+}
 
 case "${1:-}" in
   start)

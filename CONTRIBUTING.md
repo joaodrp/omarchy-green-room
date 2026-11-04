@@ -212,8 +212,9 @@ current state, never the change — git history holds that.
   and keep the installed copy untouched.
 - **Restart sparingly, never refresh.** `omarchy-restart-shell` blanks the bar and closes
   whatever is open; `omarchy-refresh-shell` resets the user's bar to defaults.
-- **Stop Quickshell by its exact command line.** `pkill -f 'qs -p ...'` also matches the shell
-  running the command and kills it; `host.sh` uses `pkill -x -f`.
+- **Stop a Quickshell instance with `qs kill -p <path>`.** A SIGTERM skips teardown and leaves
+  the panel's `pw-record` running, holding the microphone. And `pkill -f 'qs -p ...'` also
+  matches the shell running the command, killing it too.
 - **`qs log` without `-p "$OMARCHY_PATH/shell"` prints nothing useful**, so an empty result is
   not evidence of a clean load.
 - **`grim` hangs while the display is DPMS-off or the session is locked**; check
