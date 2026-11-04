@@ -13,6 +13,7 @@ when the panel opens.
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
 | `devices.mjs` | Which connected camera the saved choice means; plain JavaScript, tested with `node` |
+| `dev/host/` | A Quickshell instance that hosts only this panel; see [Running it](#running-it) |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
 | `preview.png` | The listing image the [plugin marketplace](https://plugins.omarchy.org/publish.html) reads from the repository root |
@@ -21,19 +22,36 @@ when the panel opens.
 
 ## Running it
 
+Develop in the test host: a second Quickshell instance that loads `Panel.qml` from this checkout
+under a stand-in bar icon, with the shell's own `Ui` and `Commons` and the current theme. The
+running shell is never reloaded or restarted, so the bar, open panels and keybinds stay as they
+are.
+
+```sh
+dev/host/host.sh start '{"micCheck":true}'   # (re)load; settings merge over the manifest defaults
+dev/host/host.sh ipc open                    # or close, toggle
+dev/host/host.sh log                         # QML errors and console.warn lines
+dev/host/host.sh stop
+```
+
+`start` again after every change. `GR_X` moves the stand-in icon (logical px, default 900);
+`GR_PLUGIN` loads another folder, such as a patched copy for [Screenshots](#screenshots).
+Settings written by the panel last until `stop`.
+
+The host is for development. Check a finished change once in the real bar, from a symlinked
+install:
+
 ```sh
 ln -s "$PWD" ~/.config/omarchy/plugins/io.github.joaodrp.green-room
 omarchy-shell shell rescanPlugins
 omarchy plugin enable io.github.joaodrp.green-room
-```
-
-Hot reload watches the plugins directory with `inotifywait -r`, which ignores a symlinked
-checkout. Working from a symlink means restarting the shell for every change:
-
-```sh
 omarchy-restart-shell
 qs log -p "$OMARCHY_PATH/shell" --tail 60   # QML errors land here, and only with -p
 ```
+
+Hot reload ignores the symlink, so the shell picks up a change only on restart. Never edit, copy
+into or run `git` in a plugin folder under `~/.config/omarchy/plugins/` while the shell runs; see
+[Gotchas](#gotchas).
 
 ## Checks
 
@@ -56,9 +74,10 @@ The checks prove the file parses. They do not prove the panel draws, the camera 
 sensor is released. For that:
 
 ```sh
-omarchy-shell io.github.joaodrp.green-room open
-fuser /dev/video0        # held by the shell while open
-omarchy-shell io.github.joaodrp.green-room close
+dev/host/host.sh start
+dev/host/host.sh ipc open
+fuser /dev/video0        # held while open
+dev/host/host.sh ipc close
 fuser /dev/video0        # nothing within ~2s
 ```
 
@@ -74,15 +93,15 @@ anyone to look.
 
 | To | Run |
 | --- | --- |
-| Load a change | `omarchy-restart-shell` |
-| Open, close | `omarchy-shell io.github.joaodrp.green-room open` / `close` (one bar's panel; on another monitor, click its bar icon) |
+| Load a change | `dev/host/host.sh start` |
+| Open, close | `dev/host/host.sh ipc open` / `close` |
 | Press a panel key | `wtype p`, `wtype -k Up` (any key from the README table). Keys go to the focused surface: toggle `g` and watch it change first |
 | Scroll | `wlrctl pointer scroll 15 0` (one notch down; negative scrolls up) |
 | Read the mic level | `wpctl get-volume @DEFAULT_AUDIO_SOURCE@` |
 | Move the pointer | `hyprctl dispatch 'hl.dsp.cursor.move({ x = X, y = Y })'` (logical pixels) |
 | See the screen | `grim -s 0.5 /tmp/screen.png`, then read the image |
 | Find the pinned window | `hyprctl clients -j \| jq '.[] \| select(.title == "Green Room")'` |
-| Read QML logs | `qs log -p "$OMARCHY_PATH/shell" --tail 60` |
+| Read QML logs | `dev/host/host.sh log` |
 | Check the cameras | `fuser /dev/video*` |
 
 Debug with temporary `console.warn` lines and read them from the log. `grim -g` takes logical
@@ -106,9 +125,10 @@ ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -i /dev/videoN -t 5 -f n
 ## Screenshots
 
 The README pictures show a generated person, not a contributor's room. To reshoot them, feed
-the panel a clip instead of the webcam: make a looping video from the image, then, in a local
-patch you do not commit, replace the `Camera` inside the capture stack with a `MediaPlayer`
-that targets the same sink, and drop `camera: camera` from the `CaptureSession`. The image
+the panel a clip instead of the webcam: make a looping video from the image, then, in a copy of
+the plugin outside the repository, replace the `Camera` inside the capture stack with a
+`MediaPlayer` that targets the same sink, and drop `camera: camera` from the `CaptureSession`.
+Load the copy with `GR_PLUGIN=/path/to/copy dev/host/host.sh start`. The image
 must carry no chrome, since the controls are translucent, and is flipped (`magick -flop`) to
 look right in the mirrored preview:
 
@@ -182,9 +202,16 @@ current state, never the change — git history holds that.
   were an airplane and an "HD" badge.
 - **The webcam may be gone.** A Studio Display's camera disappears with the display link; the
   panel must show the no-camera glass, not error out.
-- **Reload is a restart.** Never `omarchy-refresh-shell`: that resets the user's bar to defaults.
-  Hot reload can keep the cached `Panel.qml` despite logging `reloading`; restart before
-  testing a change.
+- **A write under `~/.config/omarchy/plugins/` reloads every plugin.** The shell watches the
+  whole tree, `.git/` included, so a `git pull` or `checkout` there fires dozens of reloads.
+  Each one rebuilds every panel, first-party ones too, and the log warns that the new IPC
+  handlers "will not be used because another handler is registered": IPC calls and keybinds
+  can be left pointing at the old panels until a restart. Work in the test host and keep the
+  installed copy untouched.
+- **Restart sparingly, never refresh.** `omarchy-restart-shell` blanks the bar and closes
+  whatever is open; `omarchy-refresh-shell` resets the user's bar to defaults.
+- **Stop Quickshell by its exact command line.** `pkill -f 'qs -p ...'` also matches the shell
+  running the command and kills it; `host.sh` uses `pkill -x -f`.
 - **`qs log` without `-p "$OMARCHY_PATH/shell"` prints nothing useful**, so an empty result is
   not evidence of a clean load.
 - **`grim` hangs while the display is DPMS-off or the session is locked**; check
