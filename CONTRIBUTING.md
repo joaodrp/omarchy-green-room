@@ -206,10 +206,10 @@ current state, never the change — git history holds that.
   panel must show the no-camera glass, not error out.
 - **A write under `~/.config/omarchy/plugins/` reloads every plugin.** The shell watches the
   whole tree, `.git/` included, so a `git pull` or `checkout` there fires dozens of reloads.
-  Each one rebuilds every panel, first-party ones too, and the log warns that the new IPC
-  handlers "will not be used because another handler is registered": IPC calls and keybinds
-  can be left pointing at the old panels until a restart. Work in the test host and keep the
-  installed copy untouched.
+  Each one rebuilds every panel, first-party ones too, closing whatever is open. The log then
+  warns that IPC handlers "will not be used because another handler is registered"; that is
+  harmless, as the new handler takes over once the old panel is gone. Work in the test host
+  and keep the installed copy untouched.
 - **Restart sparingly, never refresh.** `omarchy-restart-shell` blanks the bar and closes
   whatever is open; `omarchy-refresh-shell` resets the user's bar to defaults.
 - **Stop Quickshell by its exact command line.** `pkill -f 'qs -p ...'` also matches the shell
