@@ -1,10 +1,10 @@
-// The snapshot's notification: which editor it opens, and in which form it
-// hands that to omarchy-notification-send.
+// The snapshot's directory, and its notification: which editor it opens,
+// and in which form it hands that to omarchy-notification-send.
 // Run: node --test .github/test-snapshot.mjs
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, writeFileSync, readFileSync, symlinkSync, chmodSync, existsSync } from "node:fs"
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, chmodSync, existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 
@@ -12,26 +12,31 @@ const script = resolve(import.meta.dirname, "../snapshot.sh")
 const OLD_ARGS = "# omarchy:args=[--image <path-or-uri>] <headline> [description] [--exec <program> [args...]]"
 const NEW_ARGS = "# omarchy:args=[--image <path-or-uri>] <headline> [description] [--exec <program> [args...] | --action <label> <program> [words...]... [--with <args...>]]"
 
-// A PATH holding only stubs, so the machine's own editors never leak in.
-// The notification stub records its argv, one word per line.
-function run({ args = OLD_ARGS, programs = [], env = {} } = {}) {
+// A PATH holding only stubs, so the machine's own tools never leak in.
+function sandbox(programs) {
   const bin = mkdtempSync(join(tmpdir(), "gr-snapshot-"))
-  const out = join(bin, "argv")
   const stub = (name, body) => {
     writeFileSync(join(bin, name), `#!/bin/bash\n${body}\n`)
     chmodSync(join(bin, name), 0o755)
   }
-  for (const tool of ["grep", "cat"]) {
+  for (const tool of ["grep", "cat", "mkdir"]) {
     const real = ["/usr/bin", "/bin"].map((d) => join(d, tool)).find(existsSync)
     symlinkSync(real, join(bin, tool))
   }
+  for (const name of programs) stub(name, "")
+  return { bin, stub }
+}
+
+// The notification stub records its argv, one word per line.
+function run({ args = OLD_ARGS, programs = [], env = {} } = {}) {
+  const { bin, stub } = sandbox(programs)
+  const out = join(bin, "argv")
   stub("magick", "")
   stub("wl-copy", "cat >/dev/null")
   stub("omarchy-notification-send", `${args}\nprintf '%s\\n' "$@" >"${out}"`)
-  for (const name of programs) stub(name, "")
   const shot = join(bin, "green-room-2026-11-05_10-00-00.png")
   writeFileSync(shot, "")
-  execFileSync("/bin/bash", [script, shot], { env: { PATH: bin, HOME: bin, ...env } })
+  execFileSync("/bin/bash", [script, "finish", shot], { env: { PATH: bin, HOME: bin, ...env } })
   return { shot, argv: readFileSync(out, "utf8").trimEnd().split("\n") }
 }
 
@@ -64,4 +69,43 @@ test("an OMARCHY_SCREENSHOT_EDITOR the upgrade removed falls back", () => {
 
 test("Omasnap edits on 4.0 too, once installed", () => {
   assert.deepEqual(run({ programs: ["omasnap", "tensaku-edit"] }).argv.slice(-2, -1), ["omasnap"])
+})
+
+// HOME is the sandbox, shown as `~`; `conf` is omasnap.conf, `pictures` the
+// XDG pictures dir.
+function dir({ omasnap = false, env = {}, conf, pictures } = {}) {
+  const { bin, stub } = sandbox([])
+  stub("omarchy-capture-screenshot", omasnap ? "exec omasnap --notify" : "grim")
+  if (conf !== undefined) {
+    mkdirSync(join(bin, ".config/omasnap"), { recursive: true })
+    writeFileSync(join(bin, ".config/omasnap/omasnap.conf"), conf)
+  }
+  if (pictures) {
+    mkdirSync(join(bin, ".config"), { recursive: true })
+    writeFileSync(join(bin, ".config/user-dirs.dirs"), `XDG_PICTURES_DIR="$HOME/${pictures}"\n`)
+  }
+  const out = execFileSync("/bin/bash", [script, "dir"], { env: { PATH: bin, HOME: bin, ...env } })
+  const d = out.toString().trim()
+  assert.ok(existsSync(d), `${d} is created`)
+  return d.startsWith(bin + "/") ? "~" + d.slice(bin.length) : d
+}
+
+test("Omarchy 4.0 directory: OMARCHY_SCREENSHOT_DIR, else the pictures dir", () => {
+  assert.equal(dir(), "~/Pictures")
+  assert.equal(dir({ pictures: "Fotos" }), "~/Fotos")
+  const shots = mkdtempSync(join(tmpdir(), "gr-shots-"))
+  assert.equal(dir({ env: { OMARCHY_SCREENSHOT_DIR: shots } }), shots)
+})
+
+test("Omarchy 4.5 directory: Omasnap's, under the pictures dir by default", () => {
+  assert.equal(dir({ omasnap: true }), "~/Pictures/Screenshots")
+  assert.equal(dir({ omasnap: true, pictures: "Fotos" }), "~/Fotos/Screenshots")
+})
+
+test("Omarchy 4.5 directory: omasnap.conf, under both environment overrides", () => {
+  const conf = "[editor]\ndirectory = ~/Wrong\n[output]\nautosave = true\n directory = ~/Pictures/Captures \n"
+  assert.equal(dir({ omasnap: true, conf }), "~/Pictures/Captures")
+  const shots = mkdtempSync(join(tmpdir(), "gr-shots-"))
+  assert.equal(dir({ omasnap: true, conf, env: { OMARCHY_SCREENSHOT_DIR: shots } }), shots)
+  assert.equal(dir({ omasnap: true, conf, env: { OMARCHY_SCREENSHOT_DIR: "/nowhere", OMASNAP_SCREENSHOT_DIR: shots } }), shots)
 })

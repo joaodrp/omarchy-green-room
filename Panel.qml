@@ -347,20 +347,18 @@ Panel {
   // so it is the camera's, at sensor resolution, never the scaled glass;
   // mirror and crop are applied to the file afterwards.
   signal snapshotSaved(string path)
+  readonly property string snapshotScript:
+    decodeURIComponent(Qt.resolvedUrl("snapshot.sh").toString().replace(/^file:\/\//, ""))
   function snapshot() {
     if (!root.live || snapshotDir.running) return
     snapshotDir.running = true
   }
 
-  // The directory is resolved per snapshot by omarchy-capture-screenshot's
-  // own rule (env override, XDG pictures dir, ~/Pictures) and created the
-  // way that script creates it, so a snapshot always lands beside the
-  // screenshots.
+  // Resolved per snapshot by the installed Omarchy's screenshot rule, so a
+  // snapshot always lands beside the screenshots.
   Process {
     id: snapshotDir
-    command: ["bash", "-c",
-      '[[ -f ~/.config/user-dirs.dirs ]] && source ~/.config/user-dirs.dirs; '
-      + 'd="${OMARCHY_SCREENSHOT_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}}"; mkdir -p "$d" && echo "$d"']
+    command: ["bash", root.snapshotScript, "dir"]
     stdout: StdioCollector { id: snapshotDirOut }
     onExited: function(exitCode, exitStatus) {
       var dir = snapshotDirOut.text.trim()
@@ -375,8 +373,7 @@ Panel {
   // copies and announces it the way this Omarchy version announces a
   // screenshot.
   onSnapshotSaved: function(path) {
-    Util.execArgv(["bash", decodeURIComponent(Qt.resolvedUrl("snapshot.sh").toString().replace(/^file:\/\//, "")),
-      path, root.mirrored ? "mirror" : ""])
+    Util.execArgv(["bash", root.snapshotScript, "finish", path, root.mirrored ? "mirror" : ""])
   }
 
   function snapshotFailed(message) {

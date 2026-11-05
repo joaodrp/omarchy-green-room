@@ -13,7 +13,7 @@ when the panel opens.
 | `manifest.json` | Plugin contract: kind, entry point, settings schema and defaults |
 | `Panel.qml` | Everything: the bar icon, the glass, the capture stack, the hover chrome, the pin window |
 | `devices.mjs` | Which connected camera the saved choice means; plain JavaScript, tested with `node` |
-| `snapshot.sh` | Crops, copies and announces a saved snapshot, in the form the installed Omarchy announces a screenshot; tested with `node` |
+| `snapshot.sh` | Where a snapshot is saved, and how it is copied and announced, as the installed Omarchy does for a screenshot; tested with `node` |
 | `dev/host/` | A Quickshell instance that hosts only this panel; see [Running it](#running-it) |
 | `docs/how-it-works.md` | The capture lifecycle, and why teardown is the only camera-off |
 | `docs/images/` | README screenshots; see [Screenshots](#screenshots) |
