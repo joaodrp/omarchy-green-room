@@ -21,6 +21,9 @@ jobs:
       - name: Camera resolution
         run: node --test .github/test-devices.mjs
 
+      - name: Snapshot notification
+        run: node --test .github/test-snapshot.mjs
+
       # QML is not linted here: qmllint needs Qt 6 plus Quickshell's own types
       # and Omarchy's shell on the import path, none of which exist on a runner.
       # CONTRIBUTING.md has the command to run locally.

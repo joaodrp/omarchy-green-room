@@ -190,9 +190,10 @@ From there the snapshot is an Omarchy screenshot:
 
 | Step | Same as `omarchy-capture-screenshot` |
 | --- | --- |
-| Directory | `OMARCHY_SCREENSHOT_DIR`, else the XDG pictures dir, else `~/Pictures`, created if missing |
+| Directory | Omasnap's where it takes the screenshots: `OMASNAP_SCREENSHOT_DIR`, `OMARCHY_SCREENSHOT_DIR`, `[output] directory` in `omasnap.conf`, else `Screenshots` in the XDG pictures dir. Before Omasnap: `OMARCHY_SCREENSHOT_DIR`, else the XDG pictures dir. Created if missing |
 | Clipboard | `wl-copy` |
-| Notification | Same wording and `--exec`, so a click or the "invoke last notification" keybind opens the screenshot editor on it |
+| Notification | Open and Edit buttons where `omarchy-notification-send` takes `--action`; else a click, or the "invoke last notification" keybind, opens the editor |
+| Editor | `OMARCHY_SCREENSHOT_EDITOR` while it is installed, else Omasnap, else Tensaku |
 
 A failed capture is a critical notification carrying the backend's message. The preview itself
 never shows snapshot state beyond the shutter flash.

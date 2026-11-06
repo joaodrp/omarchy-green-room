@@ -107,7 +107,9 @@ when the check is on.
 
 `s` saves what the preview shows, mirrored or not, 16:9, at camera resolution, as a PNG in your
 screenshot directory, copies it to the clipboard, and sends the same notification a screenshot
-does. Click it, or press `Super + Alt + ,`, to open the picture in the screenshot editor.
+does: Open and Edit buttons, with Edit in Omasnap. On Omarchy before 4.5 it has no buttons; click it,
+or press `Super + Alt + ,`, to edit the picture in Tensaku. `OMARCHY_SCREENSHOT_EDITOR` picks
+another editor.
 Press `m` first for the picture others see.
 
 ## Settings
