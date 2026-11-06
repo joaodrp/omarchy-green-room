@@ -11,6 +11,33 @@ omasnap_screenshots() {
   capture=$(command -v omarchy-capture-screenshot) && grep -q omasnap "$capture"
 }
 
+# An INI value as Omasnap's QSettings reads it into a string: quotes
+# removed, `\"` and `\\` decoded, an unquoted `;` starting a comment, and
+# space around unquoted text dropped. An unquoted comma makes a list, which
+# reads as no value.
+ini_value() {
+  local raw=$1 out="" space="" quoted=0 c i
+  for ((i = 0; i < ${#raw}; i++)); do
+    c=${raw:i:1}
+    if [[ $c == "\\" ]] && ((i + 1 < ${#raw})); then
+      ((i++)); out+=$space${raw:i:1}; space=""
+    elif ((quoted)); then
+      if [[ $c == '"' ]]; then quoted=0; else out+=$c; fi
+    elif [[ $c == '"' ]]; then
+      quoted=1; out+=$space; space=""
+    elif [[ $c == ';' ]]; then
+      break
+    elif [[ $c == , ]]; then
+      return
+    elif [[ $c == [[:space:]] ]]; then
+      [[ -n $out ]] && space+=$c
+    else
+      out+=$space$c; space=""
+    fi
+  done
+  printf '%s' "$out"
+}
+
 # [output] directory from omasnap.conf, with `~` expanded as Omasnap does.
 omasnap_conf_dir() {
   local conf=${XDG_CONFIG_HOME:-$HOME/.config}/omasnap/omasnap.conf line section="" key value found=""
@@ -19,10 +46,10 @@ omasnap_conf_dir() {
     if [[ $line =~ ^[[:space:]]*\[(.*)\][[:space:]]*$ ]]; then
       section=${BASH_REMATCH[1]}
     elif [[ $section == output && $line == *=* ]]; then
-      key=${line%%=*} value=${line#*=}
+      key=${line%%=*}
       key=${key//[[:space:]]/}
-      value=${value#"${value%%[![:space:]]*}"} value=${value%"${value##*[![:space:]]}"}
       [[ $key == directory ]] || continue
+      value=$(ini_value "${line#*=}")
       [[ $value == "~" ]] && value=$HOME
       # shellcheck disable=SC2088 # the config's literal tilde
       [[ $value == "~/"* ]] && value=$HOME/${value#"~/"}

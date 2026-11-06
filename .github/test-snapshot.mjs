@@ -109,3 +109,12 @@ test("Omarchy 4.5 directory: omasnap.conf, under both environment overrides", ()
   assert.equal(dir({ omasnap: true, conf, env: { OMARCHY_SCREENSHOT_DIR: shots } }), shots)
   assert.equal(dir({ omasnap: true, conf, env: { OMARCHY_SCREENSHOT_DIR: "/nowhere", OMASNAP_SCREENSHOT_DIR: shots } }), shots)
 })
+
+test("omasnap.conf values read as Omasnap's QSettings reads them", () => {
+  const read = (value) => dir({ omasnap: true, conf: `[output]\ndirectory = ${value}\n` })
+  assert.equal(read('"~/Pictures/My Captures"'), "~/Pictures/My Captures")
+  assert.equal(read("~/Pictures/Captures ; a comment"), "~/Pictures/Captures")
+  assert.equal(read('"~/Pictures/a, b ; c"'), "~/Pictures/a, b ; c")
+  assert.equal(read('"~/Pictures/\\"q\\""'), '~/Pictures/"q"')
+  assert.equal(read("~/Pictures/a, b"), "~/Pictures/Screenshots", "a list is no value")
+})
