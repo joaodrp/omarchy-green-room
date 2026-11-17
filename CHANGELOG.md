@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1](https://github.com/joaodrp/omarchy-green-room/compare/v0.2.0...v0.2.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* announce snapshots in the form the installed Omarchy expects ([38b38b5](https://github.com/joaodrp/omarchy-green-room/commit/38b38b5b79d422dc79e7877c213407951198441b))
+* **dev:** stop the test host without leaving the mic captured ([07fb257](https://github.com/joaodrp/omarchy-green-room/commit/07fb257931d0d48b20d3738f8921ee8c2c4d122d))
+* read omasnap.conf section headers the way Omasnap does ([cd83933](https://github.com/joaodrp/omarchy-green-room/commit/cd83933c9355b0ed1e11193cd42920b773caa174))
+* read omasnap.conf values the way Omasnap does ([a184c1b](https://github.com/joaodrp/omarchy-green-room/commit/a184c1b87e9367b80f04efe3f343298ce293a33d))
+* save snapshots where Omasnap saves screenshots ([48a2137](https://github.com/joaodrp/omarchy-green-room/commit/48a2137e4ea903e54caa8463e08f51b597f6d82f))
+
 ## [0.2.0](https://github.com/joaodrp/omarchy-green-room/compare/v0.1.2...v0.2.0) (2026-11-03)
 
 
