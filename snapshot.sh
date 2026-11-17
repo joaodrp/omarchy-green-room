@@ -43,8 +43,11 @@ omasnap_conf_dir() {
   local conf=${XDG_CONFIG_HOME:-$HOME/.config}/omasnap/omasnap.conf line section="" key value found=""
   [[ -r $conf ]] || return 0
   while IFS= read -r line || [[ -n $line ]]; do
-    if [[ $line =~ ^[[:space:]]*\[(.*)\][[:space:]]*$ ]]; then
+    # A section is named up to the first `]` or `;`; the rest is ignored.
+    if [[ $line =~ ^[[:space:]]*\[([^];]*) ]]; then
       section=${BASH_REMATCH[1]}
+      section=${section#"${section%%[![:space:]]*}"}
+      section=${section%"${section##*[![:space:]]}"}
     elif [[ $section == output && $line == *=* ]]; then
       key=${line%%=*}
       key=${key//[[:space:]]/}

@@ -118,3 +118,10 @@ test("omasnap.conf values read as Omasnap's QSettings reads them", () => {
   assert.equal(read('"~/Pictures/\\"q\\""'), '~/Pictures/"q"')
   assert.equal(read("~/Pictures/a, b"), "~/Pictures/Screenshots", "a list is no value")
 })
+
+test("omasnap.conf section headers read as Omasnap's QSettings reads them", () => {
+  const read = (header) => dir({ omasnap: true, conf: `${header}\ndirectory = ~/Pictures/Captures\n` })
+  for (const header of ["[output] ; screenshots", "[ output ]", "  [output]", "[output] junk", "[output]]", "[output", "[output ; c"])
+    assert.equal(read(header), "~/Pictures/Captures", header)
+  assert.equal(read("[out;put]"), "~/Pictures/Screenshots", "the comment ends the name")
+})
